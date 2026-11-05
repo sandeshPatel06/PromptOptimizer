@@ -1,0 +1,23 @@
+{
+  "name": "promptoptimizer",
+  "version": "1.0.0",
+  "description": "Tactile Chrome & Firefox sidebar extension to engineer and optimize AI prompts with Google Gemini Flash.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "icons": "node scripts/generate-icons.mjs"
+  },
+  "keywords": [
+    "chrome-extension",
+    "firefox-addon",
+    "prompt-engineering",
+    "prompt-optimizer",
+    "gemini",
+    "second-brain"
+  ],
+  "author": "sandeshPatel06",
+  "license": "MIT",
+  "devDependencies": {
+    "sharp": "^0.33.5"
+  }
+}
