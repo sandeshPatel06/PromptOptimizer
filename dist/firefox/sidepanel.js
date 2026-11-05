@@ -1,6 +1,6 @@
 /**
  * PromptOptimizer - Main UI Controller
- * Standard ES Module without framework bloat. Fast, reactive, tactile.
+ * Minimalist, tactile, zero-slop UI controller.
  */
 
 import { Storage } from './lib/storage.js';
@@ -8,27 +8,22 @@ import { GeminiApi } from './lib/gemini.js';
 import { Permissions } from './lib/permissions.js';
 import { OPTIMIZATION_PRESETS, detectVariables, fillVariables, countMetrics } from './lib/prompts.js';
 
-// DOM References
 const elements = {
-  headerModelBadge: document.getElementById('headerModelBadge'),
-  headerStatusDot: document.getElementById('headerStatusDot'),
-  headerModelText: document.getElementById('headerModelText'),
+  headerModelSelect: document.getElementById('headerModelSelect'),
+  statusDot: document.getElementById('statusDot'),
   btnPopOut: document.getElementById('btnPopOut'),
   btnHeaderSettings: document.getElementById('btnHeaderSettings'),
   
-  navTabs: document.querySelectorAll('.tab-btn'),
-  tabContents: document.querySelectorAll('.tab-content'),
+  navSegmentBtns: document.querySelectorAll('.nav-segment-btn'),
+  panes: document.querySelectorAll('.pane'),
   
-  // Permission Banner
   permBanner: document.getElementById('permBanner'),
   btnGrantBannerPerm: document.getElementById('btnGrantBannerPerm'),
   
-  // Onboarding
   onboardingCard: document.getElementById('onboardingCard'),
   onboardingKeyInput: document.getElementById('onboardingKeyInput'),
   btnSaveOnboardingKey: document.getElementById('btnSaveOnboardingKey'),
   
-  // Optimizer View
   presetsContainer: document.getElementById('presetsContainer'),
   rawPromptInput: document.getElementById('rawPromptInput'),
   inputCharCounter: document.getElementById('inputCharCounter'),
@@ -38,9 +33,7 @@ const elements = {
   optimizeBtnText: document.getElementById('optimizeBtnText'),
   optimizeBtnSpinner: document.getElementById('optimizeBtnSpinner'),
   
-  // Results
   resultCard: document.getElementById('resultCard'),
-  resultModelBadge: document.getElementById('resultModelBadge'),
   resultStatsBadge: document.getElementById('resultStatsBadge'),
   resultOutput: document.getElementById('resultOutput'),
   variablesBar: document.getElementById('variablesBar'),
@@ -52,7 +45,6 @@ const elements = {
   btnSaveToLibrary: document.getElementById('btnSaveToLibrary'),
   btnToggleTestDrawer: document.getElementById('btnToggleTestDrawer'),
   
-  // Runner Drawer
   runnerDrawer: document.getElementById('runnerDrawer'),
   btnCloseRunner: document.getElementById('btnCloseRunner'),
   runnerInputsGrid: document.getElementById('runnerInputsGrid'),
@@ -61,23 +53,11 @@ const elements = {
   testBtnSpinner: document.getElementById('testBtnSpinner'),
   runnerOutput: document.getElementById('runnerOutput'),
   
-  // Library & History Sub-nav
-  btnSubNavSaved: document.getElementById('btnSubNavSaved'),
-  btnSubNavRecent: document.getElementById('btnSubNavRecent'),
-  librarySavedView: document.getElementById('librarySavedView'),
-  libraryHistoryView: document.getElementById('libraryHistoryView'),
-  
-  // Library Saved View
   librarySearchInput: document.getElementById('librarySearchInput'),
-  categoryFilterButtons: document.querySelectorAll('.cat-filter-btn'),
+  filterPills: document.querySelectorAll('.filter-pill'),
   promptCardsList: document.getElementById('promptCardsList'),
   btnNewPromptModal: document.getElementById('btnNewPromptModal'),
   
-  // History View
-  historyList: document.getElementById('historyList'),
-  btnClearHistory: document.getElementById('btnClearHistory'),
-  
-  // Settings Modal
   settingsModal: document.getElementById('settingsModal'),
   btnCloseSettingsModal: document.getElementById('btnCloseSettingsModal'),
   settingsApiKey: document.getElementById('settingsApiKey'),
@@ -93,7 +73,6 @@ const elements = {
   importFileInput: document.getElementById('importFileInput'),
   btnResetAllData: document.getElementById('btnResetAllData'),
   
-  // Save Prompt Modal
   savePromptModal: document.getElementById('savePromptModal'),
   saveModalTitle: document.getElementById('saveModalTitle'),
   saveModalPromptTitle: document.getElementById('saveModalPromptTitle'),
@@ -104,37 +83,29 @@ const elements = {
   btnCancelSaveModal: document.getElementById('btnCancelSaveModal'),
   btnConfirmSavePrompt: document.getElementById('btnConfirmSavePrompt'),
   
-  // Toast
   toastMessage: document.getElementById('toastMessage')
 };
 
-// Application State
 let appState = null;
 let currentActivePresetId = 'reasoning';
 let currentActiveCategoryFilter = 'all';
 let currentOptimizationResult = null;
 let editingPromptId = null;
 
-/**
- * Initialize Application
- */
 async function init() {
   appState = await Storage.getState();
   currentActivePresetId = appState.activePreset || 'reasoning';
 
   renderPresets();
   updateApiStatusUI();
-  updateModelBadge();
+  updateModelDropdown();
 
-  // Populate settings
   elements.settingsApiKey.value = appState.apiKey || '';
   elements.settingsSystemInstructions.value = appState.systemInstructions || '';
   selectModelRadio(appState.model);
 
-  // Check Permissions Health
   await checkPermissionsHealth();
 
-  // Check for pending prompt from context menu
   if (appState.pendingPrompt) {
     elements.rawPromptInput.value = appState.pendingPrompt;
     updateCharCounter();
@@ -143,116 +114,86 @@ async function init() {
 
   setupEventListeners();
   renderLibrary();
-  renderHistory();
 }
 
-/**
- * Checks Extension Permissions and updates banner & diagnostic list
- */
 async function checkPermissionsHealth() {
   const permStatus = await Permissions.checkAll();
 
-  // Top banner alert for Google Gemini API host permission
   if (permStatus.isExtension && !permStatus.hasGeminiOrigin) {
     elements.permBanner.style.display = 'flex';
   } else {
     elements.permBanner.style.display = 'none';
   }
 
-  // Render Diagnostics in Settings
   renderPermissionDiagnostics(permStatus);
 }
 
-/**
- * Renders Permissions list inside Settings modal
- */
 function renderPermissionDiagnostics(status) {
   if (!elements.permDiagList) return;
   elements.permDiagList.innerHTML = '';
 
-  const items = [
+  const list = [
     {
-      name: 'Google Gemini Network Access',
-      desc: 'Required to communicate with Google Generative Language API',
+      name: 'Google Gemini API Access',
       granted: status.hasGeminiOrigin,
       onRequest: async () => {
         const ok = await Permissions.requestGeminiHost();
         if (ok) {
-          showToast('Network permission granted');
+          showToast('Access granted');
           await checkPermissionsHealth();
         }
       }
     },
     {
-      name: 'Storage & Local Cache',
-      desc: 'Required to store API keys and prompt library locally',
-      granted: true
-    },
-    {
-      name: 'Clipboard Read & Paste',
-      desc: 'Allows 1-click pasting from your clipboard',
+      name: 'Clipboard Read/Paste',
       granted: status.hasClipboardRead,
       onRequest: async () => {
         const ok = await Permissions.requestClipboardRead();
         if (ok) {
-          showToast('Clipboard permission granted');
+          showToast('Clipboard access granted');
           await checkPermissionsHealth();
         }
       }
     },
     {
-      name: 'Active Tab Context',
-      desc: 'Allows capturing current tab details on request',
-      granted: status.hasTabs,
-      onRequest: async () => {
-        const ok = await Permissions.requestTabs();
-        if (ok) {
-          showToast('Tabs permission granted');
-          await checkPermissionsHealth();
-        }
-      }
+      name: 'Storage & Preferences',
+      granted: true
     }
   ];
 
-  items.forEach((item) => {
+  list.forEach((item) => {
     const row = document.createElement('div');
-    row.className = 'perm-row';
-
+    row.className = 'perm-item';
     row.innerHTML = `
-      <div class="perm-info">
-        <span class="perm-name">${item.name}</span>
-        <span class="perm-desc">${item.desc}</span>
-      </div>
+      <span>${item.name}</span>
       <div>
         ${item.granted 
-          ? '<span class="perm-badge granted">✓ Granted</span>' 
-          : `<button class="mini-btn btn-req-perm" style="color: var(--accent);">Grant</button>`
+          ? '<span class="perm-ok">✓ OK</span>' 
+          : '<button class="btn-xs btn-req">Grant</button>'
         }
       </div>
     `;
 
     if (!item.granted && item.onRequest) {
-      row.querySelector('.btn-req-perm').addEventListener('click', item.onRequest);
+      row.querySelector('.btn-req').addEventListener('click', item.onRequest);
     }
 
     elements.permDiagList.appendChild(row);
   });
 }
 
-/**
- * Renders optimization presets
- */
 function renderPresets() {
   elements.presetsContainer.innerHTML = '';
   OPTIMIZATION_PRESETS.forEach((preset) => {
-    const chip = document.createElement('div');
-    chip.className = `preset-chip ${preset.id === currentActivePresetId ? 'active' : ''}`;
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `mode-chip ${preset.id === currentActivePresetId ? 'active' : ''}`;
     chip.dataset.id = preset.id;
-    chip.innerHTML = `<span>${preset.glyph}</span><span>${preset.name}</span>`;
-    chip.title = `${preset.name}: ${preset.tagline}`;
+    chip.textContent = preset.name;
+    chip.title = preset.tagline;
 
     chip.addEventListener('click', async () => {
-      document.querySelectorAll('.preset-chip').forEach((c) => c.classList.remove('active'));
+      document.querySelectorAll('.mode-chip').forEach((c) => c.classList.remove('active'));
       chip.classList.add('active');
       currentActivePresetId = preset.id;
       await Storage.set({ activePreset: preset.id });
@@ -262,33 +203,24 @@ function renderPresets() {
   });
 }
 
-/**
- * Updates UI based on API key validity
- */
 function updateApiStatusUI() {
   const hasKey = Boolean(appState.apiKey && appState.apiKey.trim() !== '');
   if (hasKey) {
-    elements.headerStatusDot.className = 'status-dot active';
-    elements.headerStatusDot.title = 'Google Gemini Connected';
+    elements.statusDot.className = 'status-indicator active';
+    elements.statusDot.title = 'Gemini Connected';
     elements.onboardingCard.style.display = 'none';
   } else {
-    elements.headerStatusDot.className = 'status-dot missing';
-    elements.headerStatusDot.title = 'Missing Gemini API Key';
-    elements.onboardingCard.style.display = 'block';
+    elements.statusDot.className = 'status-indicator missing';
+    elements.statusDot.title = 'API Key Required';
+    elements.onboardingCard.style.display = 'flex';
   }
 }
 
-/**
- * Updates Header Model chip
- */
-function updateModelBadge() {
+function updateModelDropdown() {
   const model = appState.model || 'gemini-1.5-flash';
-  elements.headerModelText.textContent = model;
+  elements.headerModelSelect.value = model;
 }
 
-/**
- * Selects radio option matching model
- */
 function selectModelRadio(modelId) {
   const radios = elements.modelRadioGroup.querySelectorAll('input[type="radio"]');
   radios.forEach((r) => {
@@ -296,20 +228,26 @@ function selectModelRadio(modelId) {
   });
 }
 
-/**
- * Setup All Event Listeners
- */
 function setupEventListeners() {
-  // Top 2-way Tab navigation
-  elements.navTabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      const targetId = tab.dataset.tab;
-      elements.navTabs.forEach((t) => t.classList.remove('active'));
-      elements.tabContents.forEach((c) => c.classList.remove('active'));
+  // Model selector in topbar
+  elements.headerModelSelect.addEventListener('change', async (e) => {
+    const selected = e.target.value;
+    appState.model = selected;
+    await Storage.set({ model: selected });
+    selectModelRadio(selected);
+    showToast(`Model: ${selected}`);
+  });
 
-      tab.classList.add('active');
-      const targetPanel = document.getElementById(targetId);
-      if (targetPanel) targetPanel.classList.add('active');
+  // Top navigation switcher
+  elements.navSegmentBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.tab;
+      elements.navSegmentBtns.forEach((b) => b.classList.remove('active'));
+      elements.panes.forEach((p) => p.classList.remove('active'));
+
+      btn.classList.add('active');
+      const targetPane = document.getElementById(targetId);
+      if (targetPane) targetPane.classList.add('active');
 
       if (targetId === 'tab-library') {
         renderLibrary();
@@ -317,24 +255,7 @@ function setupEventListeners() {
     });
   });
 
-  // Library / History Sub-toggle
-  elements.btnSubNavSaved.addEventListener('click', () => {
-    elements.btnSubNavSaved.classList.add('active');
-    elements.btnSubNavRecent.classList.remove('active');
-    elements.librarySavedView.style.display = 'block';
-    elements.libraryHistoryView.style.display = 'none';
-    renderLibrary();
-  });
-
-  elements.btnSubNavRecent.addEventListener('click', () => {
-    elements.btnSubNavRecent.classList.add('active');
-    elements.btnSubNavSaved.classList.remove('active');
-    elements.librarySavedView.style.display = 'none';
-    elements.libraryHistoryView.style.display = 'block';
-    renderHistory();
-  });
-
-  // Pop-out / Full Tab
+  // Pop-out Tab
   elements.btnPopOut.addEventListener('click', () => {
     if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.create) {
       chrome.tabs.create({ url: 'sidepanel.html' });
@@ -343,7 +264,7 @@ function setupEventListeners() {
     }
   });
 
-  // Settings Modal Open / Close
+  // Settings Modal
   elements.btnHeaderSettings.addEventListener('click', async () => {
     elements.settingsApiKey.value = appState.apiKey || '';
     elements.settingsSystemInstructions.value = appState.systemInstructions || '';
@@ -356,43 +277,42 @@ function setupEventListeners() {
     elements.settingsModal.classList.remove('active');
   });
 
-  // Permission Banner Button
+  // Grant banner permission
   elements.btnGrantBannerPerm.addEventListener('click', async () => {
     const granted = await Permissions.requestGeminiHost();
     if (granted) {
       elements.permBanner.style.display = 'none';
-      showToast('Network permission granted!');
+      showToast('Network access granted');
       await checkPermissionsHealth();
     }
   });
 
-  // Request All Missing Permissions in Settings
+  // Request All Permissions
   elements.btnRequestAllPerms.addEventListener('click', async () => {
     await Permissions.request(
       ['clipboardRead', 'tabs'],
       ['https://generativelanguage.googleapis.com/*']
     );
     await checkPermissionsHealth();
-    showToast('Permission check updated');
+    showToast('Permissions refreshed');
   });
 
-  // Onboarding API key save
+  // Save onboarding key
   elements.btnSaveOnboardingKey.addEventListener('click', async () => {
     const key = elements.onboardingKeyInput.value.trim();
     if (!key) {
-      showToast('Please enter your Gemini API key');
+      showToast('Enter a Gemini API key');
       return;
     }
 
-    elements.btnSaveOnboardingKey.textContent = 'Verifying...';
     elements.btnSaveOnboardingKey.disabled = true;
+    elements.btnSaveOnboardingKey.textContent = '...';
 
-    // Check host permissions first
     await Permissions.requestGeminiHost();
 
     const validation = await GeminiApi.validateApiKey(key);
     elements.btnSaveOnboardingKey.disabled = false;
-    elements.btnSaveOnboardingKey.textContent = 'Verify & Connect';
+    elements.btnSaveOnboardingKey.textContent = 'Save';
 
     if (validation.valid) {
       appState.apiKey = key;
@@ -400,9 +320,9 @@ function setupEventListeners() {
       await Storage.set({ apiKey: key, hasCompletedOnboarding: true });
       elements.settingsApiKey.value = key;
       updateApiStatusUI();
-      showToast('Connected to Google Gemini!');
+      showToast('Gemini connected');
     } else {
-      alert(`Validation failed: ${validation.error}`);
+      alert(`Invalid key: ${validation.error}`);
     }
   });
 
@@ -415,11 +335,10 @@ function setupEventListeners() {
       if (text) {
         elements.rawPromptInput.value = text;
         updateCharCounter();
-        showToast('Pasted from clipboard');
+        showToast('Pasted');
         return;
       }
     } catch {
-      // Try requesting clipboardRead permission
       const granted = await Permissions.requestClipboardRead();
       if (granted) {
         try {
@@ -427,14 +346,14 @@ function setupEventListeners() {
           if (text) {
             elements.rawPromptInput.value = text;
             updateCharCounter();
-            showToast('Pasted from clipboard');
+            showToast('Pasted');
             return;
           }
         } catch {
           // fallback
         }
       }
-      showToast('Use Ctrl+V / Cmd+V to paste into editor');
+      showToast('Press Cmd+V / Ctrl+V to paste');
     }
   });
 
@@ -444,17 +363,17 @@ function setupEventListeners() {
     elements.rawPromptInput.focus();
   });
 
-  // Optimize Prompt Button
+  // Optimize
   elements.btnOptimize.addEventListener('click', executeOptimization);
 
   // Copy Result
   elements.btnCopyResult.addEventListener('click', () => {
     if (!currentOptimizationResult) return;
     navigator.clipboard.writeText(currentOptimizationResult.optimizedPrompt);
-    showToast('Copied optimized prompt!');
+    showToast('Copied to clipboard');
   });
 
-  // Save to Library Modal Trigger
+  // Save Result to Library
   elements.btnSaveToLibrary.addEventListener('click', () => {
     if (!currentOptimizationResult) return;
     openSaveModal({
@@ -463,14 +382,14 @@ function setupEventListeners() {
       optimizedPrompt: currentOptimizationResult.optimizedPrompt,
       variables: currentOptimizationResult.detectedVariables,
       category: 'custom',
-      tags: ['optimized']
+      tags: ['refined']
     });
   });
 
-  // Toggle Live Test Runner
+  // Toggle Test Drawer
   elements.btnToggleTestDrawer.addEventListener('click', () => {
-    const isVisible = elements.runnerDrawer.style.display === 'block';
-    elements.runnerDrawer.style.display = isVisible ? 'none' : 'block';
+    const isVisible = elements.runnerDrawer.style.display === 'flex';
+    elements.runnerDrawer.style.display = isVisible ? 'none' : 'flex';
     if (!isVisible) {
       renderRunnerInputs();
     }
@@ -485,9 +404,9 @@ function setupEventListeners() {
   // Library Search and Filters
   elements.librarySearchInput.addEventListener('input', renderLibrary);
 
-  elements.categoryFilterButtons.forEach((btn) => {
+  elements.filterPills.forEach((btn) => {
     btn.addEventListener('click', () => {
-      elements.categoryFilterButtons.forEach((b) => b.classList.remove('active'));
+      elements.filterPills.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       currentActiveCategoryFilter = btn.dataset.cat;
       renderLibrary();
@@ -505,20 +424,9 @@ function setupEventListeners() {
     });
   });
 
-  // Save Modal Buttons
   elements.btnCloseSaveModal.addEventListener('click', closeSaveModal);
   elements.btnCancelSaveModal.addEventListener('click', closeSaveModal);
   elements.btnConfirmSavePrompt.addEventListener('click', confirmSavePrompt);
-
-  // Clear History
-  elements.btnClearHistory.addEventListener('click', async () => {
-    if (confirm('Clear all prompt history?')) {
-      await Storage.clearHistory();
-      appState.history = [];
-      renderHistory();
-      showToast('History cleared');
-    }
-  });
 
   // Settings Actions
   elements.btnTestKey.addEventListener('click', async () => {
@@ -530,7 +438,7 @@ function setupEventListeners() {
     showKeyStatus('Verifying...', 'muted');
     const result = await GeminiApi.validateApiKey(key);
     if (result.valid) {
-      showKeyStatus('✓ Key is valid and active!', 'success');
+      showKeyStatus('✓ Key is valid', 'success');
     } else {
       showKeyStatus(`✗ ${result.error}`, 'danger');
     }
@@ -552,7 +460,7 @@ function setupEventListeners() {
     });
 
     updateApiStatusUI();
-    updateModelBadge();
+    updateModelDropdown();
     elements.settingsModal.classList.remove('active');
     showToast('Settings saved');
   });
@@ -566,7 +474,7 @@ function setupEventListeners() {
     a.download = `prompt-optimizer-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Prompts exported');
+    showToast('Exported');
   });
 
   elements.btnImportDataTrigger.addEventListener('click', () => {
@@ -586,7 +494,7 @@ function setupEventListeners() {
         } else {
           appState = await Storage.getState();
           renderLibrary();
-          showToast(`Imported ${result.count} prompts!`);
+          showToast(`Imported ${result.count} prompts`);
         }
       }
     };
@@ -595,7 +503,7 @@ function setupEventListeners() {
   });
 
   elements.btnResetAllData.addEventListener('click', async () => {
-    if (confirm('Reset all prompts and storage to factory defaults?')) {
+    if (confirm('Reset prompts and storage to factory defaults?')) {
       localStorage.clear();
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
         await chrome.storage.local.clear();
@@ -606,25 +514,22 @@ function setupEventListeners() {
 
   // Global Keyboard Shortcuts
   document.addEventListener('keydown', (e) => {
-    // Cmd/Ctrl + Enter: Optimize
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      const activeTab = document.querySelector('.tab-content.active');
-      if (activeTab && activeTab.id === 'tab-optimizer') {
+      const activePane = document.querySelector('.pane.active');
+      if (activePane && activePane.id === 'tab-optimizer') {
         e.preventDefault();
         executeOptimization();
       }
     }
 
-    // '/' to focus search in Library
     if (e.key === '/' && document.activeElement !== elements.rawPromptInput && document.activeElement !== elements.librarySearchInput) {
-      const activeTab = document.querySelector('.tab-content.active');
-      if (activeTab && activeTab.id === 'tab-library') {
+      const activePane = document.querySelector('.pane.active');
+      if (activePane && activePane.id === 'tab-library') {
         e.preventDefault();
         elements.librarySearchInput.focus();
       }
     }
 
-    // Escape to close modals
     if (e.key === 'Escape') {
       closeSaveModal();
       elements.settingsModal.classList.remove('active');
@@ -633,45 +538,37 @@ function setupEventListeners() {
   });
 }
 
-/**
- * Updates Character and Word Counter
- */
 function updateCharCounter() {
   const metrics = countMetrics(elements.rawPromptInput.value);
   elements.inputCharCounter.textContent = `${metrics.words} words • ${metrics.chars} chars`;
 }
 
-/**
- * Execute Optimization
- */
 async function executeOptimization() {
   const rawPrompt = elements.rawPromptInput.value.trim();
   if (!rawPrompt) {
-    showToast('Enter a prompt to optimize');
+    showToast('Enter a prompt first');
     elements.rawPromptInput.focus();
     return;
   }
 
   if (!appState.apiKey) {
     elements.btnHeaderSettings.click();
-    showToast('Please enter your Google Gemini API key');
+    showToast('Gemini API key required');
     return;
   }
 
-  // Ensure host permission before calling API
   const permStatus = await Permissions.checkAll();
   if (permStatus.isExtension && !permStatus.hasGeminiOrigin) {
     const granted = await Permissions.requestGeminiHost();
     if (!granted) {
-      alert('Network permission to Google Gemini API is required to optimize prompts.');
+      alert('Network permission required to contact Google Gemini API.');
       return;
     }
   }
 
-  // Set loading state
   elements.btnOptimize.disabled = true;
   elements.optimizeBtnSpinner.style.display = 'inline-block';
-  elements.optimizeBtnText.textContent = 'Optimizing...';
+  elements.optimizeBtnText.textContent = 'Refining...';
 
   const activePreset = OPTIMIZATION_PRESETS.find((p) => p.id === currentActivePresetId);
 
@@ -686,19 +583,16 @@ async function executeOptimization() {
 
     currentOptimizationResult = result;
 
-    // Display result
     elements.resultCard.style.display = 'flex';
     elements.resultOutput.textContent = result.optimizedPrompt;
-    elements.resultModelBadge.textContent = appState.model;
     elements.resultStatsBadge.textContent = `~${result.metrics.estimatedTokens} tokens`;
 
-    // Render variables
     elements.variablesContainer.innerHTML = '';
     if (result.detectedVariables.length > 0) {
       elements.variablesBar.style.display = 'flex';
       result.detectedVariables.forEach((v) => {
         const span = document.createElement('span');
-        span.className = 'var-badge';
+        span.className = 'var-token';
         span.textContent = `{{${v}}}`;
         elements.variablesContainer.appendChild(span);
       });
@@ -706,17 +600,15 @@ async function executeOptimization() {
       elements.variablesBar.style.display = 'none';
     }
 
-    // Render improvements rationale
     elements.rationaleList.innerHTML = '';
     const lines = result.rationale.split('\n').filter((l) => l.trim().length > 0);
-    elements.improvementsSummary.textContent = `▸ Improvements & Rationale (${lines.length})`;
+    elements.improvementsSummary.textContent = `${lines.length} modifications applied`;
     lines.forEach((line) => {
       const li = document.createElement('li');
       li.textContent = line.replace(/^[-*•\d.]+\s*/, '');
       elements.rationaleList.appendChild(li);
     });
 
-    // Save to history
     await Storage.addHistory({
       rawPrompt,
       optimizedPrompt: result.optimizedPrompt,
@@ -727,21 +619,18 @@ async function executeOptimization() {
     });
 
     appState = await Storage.getState();
-    showToast('Prompt optimized!');
+    showToast('Prompt refined');
 
     elements.resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch (err) {
-    alert(`Optimization Error: ${err instanceof Error ? err.message : String(err)}`);
+    alert(`Optimization error: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
     elements.btnOptimize.disabled = false;
     elements.optimizeBtnSpinner.style.display = 'none';
-    elements.optimizeBtnText.textContent = 'Optimize Prompt';
+    elements.optimizeBtnText.textContent = 'Refine Prompt';
   }
 }
 
-/**
- * Render Variable Inputs in Live Test Sandbox
- */
 function renderRunnerInputs() {
   if (!currentOptimizationResult) return;
   elements.runnerInputsGrid.innerHTML = '';
@@ -750,32 +639,29 @@ function renderRunnerInputs() {
 
   const vars = currentOptimizationResult.detectedVariables;
   if (vars.length === 0) {
-    elements.runnerInputsGrid.innerHTML = '<span style="font-size: 11px; color: var(--text-secondary);">No variables required. Ready to run as-is.</span>';
+    elements.runnerInputsGrid.innerHTML = '<span style="font-size: 11px; color: var(--text-muted);">No variables required. Ready to run directly.</span>';
     return;
   }
 
   vars.forEach((v) => {
     const row = document.createElement('div');
-    row.className = 'runner-var-row';
+    row.className = 'sandbox-row';
     row.innerHTML = `
-      <label class="runner-var-label">{{${v}}}</label>
-      <input type="text" class="text-input runner-var-input" data-var="${v}" placeholder="Value for ${v}...">
+      <label class="sandbox-label">{{${v}}}</label>
+      <input type="text" class="input-flat sandbox-var-input" data-var="${v}" placeholder="Value for ${v}...">
     `;
     elements.runnerInputsGrid.appendChild(row);
   });
 }
 
-/**
- * Execute Prompt Test in Live Sandbox
- */
 async function executePromptTest() {
   if (!currentOptimizationResult) return;
   if (!appState.apiKey) {
-    showToast('Google Gemini API key required.');
+    showToast('Gemini API key required');
     return;
   }
 
-  const inputs = elements.runnerInputsGrid.querySelectorAll('.runner-var-input');
+  const inputs = elements.runnerInputsGrid.querySelectorAll('.sandbox-var-input');
   const values = {};
   inputs.forEach((input) => {
     values[input.dataset.var] = input.value.trim();
@@ -801,13 +687,10 @@ async function executePromptTest() {
   } finally {
     elements.btnExecuteTest.disabled = false;
     elements.testBtnSpinner.style.display = 'none';
-    elements.testBtnText.textContent = 'Run with Gemini';
+    elements.testBtnText.textContent = 'Execute Test';
   }
 }
 
-/**
- * Render Saved Prompts in Library
- */
 function renderLibrary() {
   elements.promptCardsList.innerHTML = '';
   const query = elements.librarySearchInput.value.toLowerCase().trim();
@@ -830,124 +713,76 @@ function renderLibrary() {
 
   if (filtered.length === 0) {
     elements.promptCardsList.innerHTML = `
-      <div class="empty-state">
-        <p>No saved prompts match criteria.</p>
+      <div class="empty-view">
+        <p>No saved prompts found.</p>
       </div>
     `;
     return;
   }
 
   filtered.forEach((prompt) => {
-    const card = document.createElement('article');
-    card.className = 'prompt-card';
+    const item = document.createElement('article');
+    item.className = 'prompt-item';
 
     const tagsHtml = (prompt.tags || [])
-      .map((t) => `<span class="tag-badge">#${t}</span>`)
+      .map((t) => `<span class="tag-unit">#${t}</span>`)
       .join('');
 
-    card.innerHTML = `
-      <div class="prompt-card-header">
-        <span class="prompt-card-title">${escapeHtml(prompt.title)}</span>
-        <button class="mini-btn btn-star" title="Favorite" data-id="${prompt.id}">
+    item.innerHTML = `
+      <div class="prompt-item-head">
+        <span class="prompt-item-title">${escapeHtml(prompt.title)}</span>
+        <button class="btn-text btn-fav" title="Star" data-id="${prompt.id}">
           ${prompt.isFavorite ? '★' : '☆'}
         </button>
       </div>
-      ${prompt.description ? `<p class="prompt-card-desc">${escapeHtml(prompt.description)}</p>` : ''}
-      <div class="prompt-card-footer">
-        <div style="display: flex; gap: 4px; align-items: center;">
-          <span class="tag-badge" style="color: var(--accent);">${prompt.category}</span>
+      ${prompt.description ? `<p class="prompt-item-desc">${escapeHtml(prompt.description)}</p>` : ''}
+      <div class="prompt-item-foot">
+        <div class="meta-tags">
+          <span class="tag-cat">${prompt.category}</span>
           ${tagsHtml}
         </div>
-        <div style="display: flex; gap: 4px;">
-          <button class="action-pill-btn btn-card-copy" title="Copy prompt">Copy</button>
-          <button class="action-pill-btn btn-card-use" title="Open in Optimizer">Use</button>
-          <button class="mini-btn btn-card-delete" title="Delete" style="color: var(--text-muted);">&times;</button>
+        <div class="item-actions">
+          <button class="tool-btn btn-item-copy">Copy</button>
+          <button class="tool-btn btn-item-use">Use</button>
+          <button class="btn-text btn-item-del" style="color: var(--text-muted);">&times;</button>
         </div>
       </div>
     `;
 
-    card.querySelector('.btn-star').addEventListener('click', async (e) => {
+    item.querySelector('.btn-fav').addEventListener('click', async (e) => {
       e.stopPropagation();
       const newFav = await Storage.toggleFavorite(prompt.id);
       prompt.isFavorite = newFav;
       renderLibrary();
     });
 
-    card.querySelector('.btn-card-copy').addEventListener('click', (e) => {
+    item.querySelector('.btn-item-copy').addEventListener('click', (e) => {
       e.stopPropagation();
       navigator.clipboard.writeText(prompt.optimizedPrompt || prompt.rawPrompt);
       showToast(`Copied "${prompt.title}"`);
     });
 
-    card.querySelector('.btn-card-use').addEventListener('click', () => {
+    item.querySelector('.btn-item-use').addEventListener('click', () => {
       elements.rawPromptInput.value = prompt.rawPrompt || prompt.optimizedPrompt;
       updateCharCounter();
-      document.querySelector('.tab-btn[data-tab="tab-optimizer"]').click();
-      showToast('Loaded into Optimizer');
+      document.querySelector('.nav-segment-btn[data-tab="tab-optimizer"]').click();
+      showToast('Loaded into editor');
     });
 
-    card.querySelector('.btn-card-delete').addEventListener('click', async (e) => {
+    item.querySelector('.btn-item-del').addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (confirm(`Delete prompt "${prompt.title}"?`)) {
+      if (confirm(`Delete "${prompt.title}"?`)) {
         await Storage.deletePrompt(prompt.id);
         appState = await Storage.getState();
         renderLibrary();
-        showToast('Prompt deleted');
+        showToast('Deleted');
       }
     });
 
-    elements.promptCardsList.appendChild(card);
+    elements.promptCardsList.appendChild(item);
   });
 }
 
-/**
- * Render History List
- */
-function renderHistory() {
-  elements.historyList.innerHTML = '';
-  const history = appState.history || [];
-
-  if (history.length === 0) {
-    elements.historyList.innerHTML = '<div class="empty-state">No recent optimizations logged yet.</div>';
-    return;
-  }
-
-  history.forEach((item) => {
-    const el = document.createElement('div');
-    el.className = 'history-item';
-    const dateStr = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    el.innerHTML = `
-      <div class="history-item-top">
-        <span style="font-family: var(--font-mono); color: var(--accent); font-size: 10.5px;">${item.preset} &bull; ${item.model}</span>
-        <span style="font-size: 10.5px; color: var(--text-muted);">${dateStr}</span>
-      </div>
-      <div style="font-size: 11.5px; color: var(--text-secondary); white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(item.optimizedPrompt)}</div>
-      <div style="display: flex; justify-content: flex-end; gap: 4px; margin-top: 4px;">
-        <button class="action-pill-btn btn-history-copy">Copy</button>
-        <button class="action-pill-btn btn-history-restore">Restore</button>
-      </div>
-    `;
-
-    el.querySelector('.btn-history-copy').addEventListener('click', () => {
-      navigator.clipboard.writeText(item.optimizedPrompt);
-      showToast('Copied from history');
-    });
-
-    el.querySelector('.btn-history-restore').addEventListener('click', () => {
-      elements.rawPromptInput.value = item.rawPrompt || item.optimizedPrompt;
-      updateCharCounter();
-      document.querySelector('.tab-btn[data-tab="tab-optimizer"]').click();
-      showToast('Restored to editor');
-    });
-
-    elements.historyList.appendChild(el);
-  });
-}
-
-/**
- * Modal Handling
- */
 function openSaveModal(data) {
   editingPromptId = data.id || null;
   elements.saveModalTitle.textContent = editingPromptId ? 'Edit Prompt' : 'Save Prompt';
@@ -967,7 +802,7 @@ function closeSaveModal() {
 async function confirmSavePrompt() {
   const title = elements.saveModalPromptTitle.value.trim();
   if (!title) {
-    alert('Please enter a prompt title.');
+    alert('Please enter a title.');
     elements.saveModalPromptTitle.focus();
     return;
   }
@@ -1004,15 +839,12 @@ async function confirmSavePrompt() {
   showToast(`Saved "${title}"`);
 }
 
-/**
- * Utilities
- */
 function showToast(msg) {
   elements.toastMessage.textContent = msg;
   elements.toastMessage.classList.add('show');
   setTimeout(() => {
     elements.toastMessage.classList.remove('show');
-  }, 2200);
+  }, 1800);
 }
 
 function showKeyStatus(msg, type) {
@@ -1024,7 +856,7 @@ function showKeyStatus(msg, type) {
 function deriveTitleFromPrompt(text) {
   if (!text) return 'Custom Prompt';
   const firstLine = text.trim().split('\n')[0].replace(/^[#*\s-]+/, '').trim();
-  return firstLine.slice(0, 36) || 'Custom Prompt';
+  return firstLine.slice(0, 32) || 'Custom Prompt';
 }
 
 function escapeHtml(str) {

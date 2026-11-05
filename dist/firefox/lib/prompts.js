@@ -5,9 +5,8 @@
 export const OPTIMIZATION_PRESETS = [
   {
     id: 'reasoning',
-    name: 'Reasoning & CoT',
+    name: 'Reasoning',
     tagline: 'Step-by-step thinking & edge-cases',
-    glyph: '🧠',
     instruction: `Transform this prompt to require rigorous Chain-of-Thought (CoT) reasoning. 
 1. Instruct the model to break down complex problems step-by-step before arriving at the conclusion.
 2. Require probing for non-obvious edge cases, hidden assumptions, and potential failure modes.
@@ -15,9 +14,8 @@ export const OPTIMIZATION_PRESETS = [
   },
   {
     id: 'code',
-    name: 'Code & Systems',
+    name: 'Code',
     tagline: 'Type-safety, performance & clean architecture',
-    glyph: '💻',
     instruction: `Transform this prompt for senior software engineering tasks.
 1. Specify explicit programming languages, frameworks, and typing constraints.
 2. Require production-grade error handling, zero unhandled edge-cases, and asymptotic complexity awareness.
@@ -25,9 +23,8 @@ export const OPTIMIZATION_PRESETS = [
   },
   {
     id: 'direct',
-    name: 'Direct & Crisp',
+    name: 'Direct',
     tagline: 'Zero fluff, high signal-to-noise ratio',
-    glyph: '⚡',
     instruction: `Transform this prompt to be hyper-concise and direct.
 1. Eliminate all pleasantries, generic filler, preamble, and conversational fluff.
 2. Structure the prompt with strict imperative verbs and unambiguous constraints.
@@ -35,9 +32,8 @@ export const OPTIMIZATION_PRESETS = [
   },
   {
     id: 'structured',
-    name: 'Structured & JSON',
+    name: 'JSON',
     tagline: 'Deterministic schema & machine-readable data',
-    glyph: '📋',
     instruction: `Transform this prompt for strict structured data extraction or generation.
 1. Provide an explicit output contract (e.g. strict JSON or Markdown table).
 2. Mandate validation rules (handling nulls, enforcing types, date formats).
@@ -45,9 +41,8 @@ export const OPTIMIZATION_PRESETS = [
   },
   {
     id: 'persona',
-    name: 'Expert Persona',
+    name: 'Persona',
     tagline: 'World-class specialist framing & standards',
-    glyph: '🎭',
     instruction: `Transform this prompt by assigning a world-class domain expert role.
 1. Establish a specialized persona with defined expertise, philosophical principles, and quality standards.
 2. Frame the user query within a realistic, high-stakes operational context.
@@ -184,9 +179,6 @@ Output with concise headers, minimal jargon, and high signal-to-noise ratio.`,
   }
 ];
 
-/**
- * Extracts {{variable_name}} tokens from a prompt template string
- */
 export function detectVariables(text) {
   if (!text) return [];
   const regex = /\{\{([a-zA-Z0-9_\s-]+)\}\}/g;
@@ -201,9 +193,6 @@ export function detectVariables(text) {
   return Array.from(matches);
 }
 
-/**
- * Replaces variables in a prompt template with provided values
- */
 export function fillVariables(template, values) {
   if (!template) return '';
   return template.replace(/\{\{([a-zA-Z0-9_\s-]+)\}\}/g, (fullMatch, varName) => {
@@ -215,15 +204,11 @@ export function fillVariables(template, values) {
   });
 }
 
-/**
- * Approximates token count and word count
- */
 export function countMetrics(text) {
   if (!text) return { words: 0, estimatedTokens: 0, chars: 0 };
   const trimmed = text.trim();
   const words = trimmed ? trimmed.split(/\s+/).length : 0;
   const chars = text.length;
-  // Gemini / standard LLM rule-of-thumb: ~4 characters per token
   const estimatedTokens = Math.ceil(chars / 3.8);
   return { words, estimatedTokens, chars };
 }
