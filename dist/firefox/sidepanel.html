@@ -27,65 +27,60 @@
         <button class="icon-btn" id="btnPopOut" title="Open in Full Tab" aria-label="Open in Full Tab">
           <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         </button>
-        <button class="icon-btn" id="btnHeaderSettings" title="Settings" aria-label="Settings">
+        <button class="icon-btn" id="btnHeaderSettings" title="Settings & Permissions" aria-label="Settings">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
       </div>
     </header>
 
-    <!-- Navigation Tabs -->
+    <!-- Top View Switcher (Clean 2-Way Control) -->
     <nav class="nav-tabs" role="tablist">
       <button class="tab-btn active" data-tab="tab-optimizer" role="tab">
         <span class="tab-icon">⚡</span> Optimizer
       </button>
       <button class="tab-btn" data-tab="tab-library" role="tab">
-        <span class="tab-icon">📚</span> Saved Prompts
-      </button>
-      <button class="tab-btn" data-tab="tab-history" role="tab">
-        <span class="tab-icon">🕒</span> History
-      </button>
-      <button class="tab-btn" data-tab="tab-settings" role="tab">
-        <span class="tab-icon">⚙️</span> Settings
+        <span class="tab-icon">📚</span> Library &amp; History
       </button>
     </nav>
 
-    <!-- TAB 1: OPTIMIZER -->
+    <!-- Global Permission Alert Banner (shown only if essential host permissions are missing) -->
+    <div class="permission-banner" id="permBanner" style="display: none;">
+      <div class="permission-banner-text">
+        <strong>Permission needed:</strong> Grant network access to connect to Google Gemini API.
+      </div>
+      <button class="btn-secondary" id="btnGrantBannerPerm" style="padding: 3px 8px; font-size: 11px;">Grant Access</button>
+    </div>
+
+    <!-- MAIN TAB 1: OPTIMIZER -->
     <main class="tab-content active" id="tab-optimizer" role="tabpanel">
-      <!-- Onboarding Banner (visible if no API key is set) -->
+      <!-- First-time Onboarding (shown if API key is empty) -->
       <section class="onboarding-banner" id="onboardingCard" style="display: none;">
         <h2>Google Gemini Setup</h2>
-        <p>PromptOptimizer connects directly from your browser to Google's Generative Language API. Zero telemetry, no third-party servers.</p>
+        <p>Connect directly to Google's Generative Language API. Your key stays in your browser's local storage.</p>
         <div class="key-input-row">
           <input type="password" id="onboardingKeyInput" class="text-input" placeholder="Paste Gemini API key (AIzaSy...)" autocomplete="off">
-          <button class="btn-primary" id="btnSaveOnboardingKey" style="width: auto; padding: 0 14px;">Verify</button>
+          <button class="btn-primary" id="btnSaveOnboardingKey" style="width: auto; padding: 0 14px;">Verify &amp; Connect</button>
         </div>
         <div style="margin-top: 8px; font-size: 11px;">
           <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style="color: var(--accent); text-decoration: none;">Get a free API key at Google AI Studio &rarr;</a>
         </div>
       </section>
 
-      <!-- Preset Pills -->
-      <div class="section-label">
-        <span>Strategy Directive</span>
-        <span id="currentPresetName" style="color: var(--text-primary); font-family: var(--font-mono); font-weight: normal; text-transform: none;">Reasoning & CoT</span>
-      </div>
+      <!-- Strategy Segmented Pills -->
       <div class="presets-strip" id="presetsContainer">
         <!-- Rendered via JS -->
       </div>
 
-      <!-- Editor Section -->
-      <div class="section-label">
-        <span>Raw Prompt or Draft</span>
-        <div class="editor-actions-inline">
-          <button class="mini-btn" id="btnPastePrompt">Paste</button>
-          <button class="mini-btn" id="btnClearPrompt">Clear</button>
-        </div>
-      </div>
+      <!-- Prompt Input Editor -->
       <div class="editor-wrapper">
-        <textarea id="rawPromptInput" class="text-area" placeholder="Enter instructions, messy ideas, or an existing prompt..."></textarea>
+        <textarea id="rawPromptInput" class="text-area" placeholder="Enter instructions, notes, or an existing prompt to optimize..."></textarea>
+        
         <div class="editor-footer">
-          <span id="inputCharCounter">0 words &bull; 0 chars</span>
-          <span><kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">Enter</kbd> to optimize</span>
+          <div class="editor-stats" id="inputCharCounter">0 words &bull; 0 chars</div>
+          <div class="editor-controls">
+            <button class="mini-btn" id="btnPastePrompt" title="Paste from clipboard">📋 Paste</button>
+            <button class="mini-btn" id="btnClearPrompt" title="Clear input">Clear</button>
+          </div>
         </div>
       </div>
 
@@ -96,47 +91,47 @@
         <kbd class="kbd">⌘↵</kbd>
       </button>
 
-      <!-- Results View -->
+      <!-- Result Card -->
       <section class="result-card" id="resultCard" style="display: none;">
         <header class="result-header">
-          <div class="result-subtabs">
-            <button class="subtab-btn active" data-subtab="subtab-output">Optimized</button>
-            <button class="subtab-btn" data-subtab="subtab-rationale">Rationale</button>
-            <button class="subtab-btn" data-subtab="subtab-vars">Variables <span id="varCountBadge" style="display:none; font-weight: bold;">(0)</span></button>
+          <div class="result-meta">
+            <span class="tag-badge" id="resultModelBadge">gemini-1.5-flash</span>
+            <span class="result-stats" id="resultStatsBadge">~0 tokens</span>
           </div>
           <div class="result-actions">
-            <button class="action-pill-btn" id="btnCopyResult" title="Copy to clipboard">
+            <button class="action-pill-btn" id="btnCopyResult" title="Copy prompt to clipboard">
               <span>📋 Copy</span>
             </button>
-            <button class="action-pill-btn" id="btnSaveToLibrary" title="Save to Prompt Library">
+            <button class="action-pill-btn" id="btnSaveToLibrary" title="Save to Library">
               <span>💾 Save</span>
             </button>
             <button class="action-pill-btn" id="btnToggleTestDrawer" title="Test Prompt Live">
-              <span>🧪 Test</span>
+              <span>▶ Test</span>
             </button>
           </div>
         </header>
 
-        <!-- Subtab Output -->
-        <div id="subtab-output" class="result-body" style="display: block;"></div>
-
-        <!-- Subtab Rationale -->
-        <div id="subtab-rationale" class="result-body" style="display: none;">
-          <ul class="rationale-list" id="rationaleList"></ul>
-        </div>
-
-        <!-- Subtab Variables -->
-        <div id="subtab-vars" class="result-body" style="display: none;">
+        <!-- Detected Variables Bar (if any) -->
+        <div class="variables-bar" id="variablesBar" style="display: none;">
+          <span style="font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);">VARIABLES:</span>
           <div class="variables-container" id="variablesContainer"></div>
         </div>
 
-        <!-- Live Interactive Test Runner Drawer -->
+        <!-- The Optimized Prompt -->
+        <div id="resultOutput" class="result-body"></div>
+
+        <!-- Improvements Collapsible Details -->
+        <details class="improvements-drawer" id="improvementsDrawer">
+          <summary id="improvementsSummary">Improvements &amp; Rationale</summary>
+          <ul class="rationale-list" id="rationaleList"></ul>
+        </details>
+
+        <!-- Live Interactive Test Runner Sandbox -->
         <div class="runner-drawer" id="runnerDrawer" style="display: none;">
           <div class="runner-title">
-            <span>Live Test Sandbox (Gemini Flash)</span>
-            <button class="mini-btn" id="btnCloseRunner">Close</button>
+            <span>Test Sandbox (Live Execution)</span>
+            <button class="mini-btn" id="btnCloseRunner">&times;</button>
           </div>
-          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Fill in template variables and test the prompt directly:</p>
           <div class="runner-inputs-grid" id="runnerInputsGrid"></div>
           <button class="btn-secondary" id="btnExecuteTest" style="width: 100%;">
             <span id="testBtnSpinner" class="spinner" style="display: none;"></span>
@@ -147,118 +142,139 @@
       </section>
     </main>
 
-    <!-- TAB 2: LIBRARY (SAVED PROMPTS) -->
+    <!-- MAIN TAB 2: LIBRARY & HISTORY -->
     <section class="tab-content" id="tab-library" role="tabpanel">
-      <div class="library-search-bar">
-        <div class="search-input-wrapper">
-          <input type="text" id="librarySearchInput" class="text-input" placeholder="Search prompts (press / to focus)...">
+      <!-- Library / History Sub-toggle -->
+      <div class="sub-nav-toggle">
+        <button class="sub-nav-btn active" id="btnSubNavSaved">Saved Prompts</button>
+        <button class="sub-nav-btn" id="btnSubNavRecent">Recent History</button>
+      </div>
+
+      <!-- View A: Saved Prompts -->
+      <div id="librarySavedView">
+        <div class="library-search-bar">
+          <div class="search-input-wrapper">
+            <input type="text" id="librarySearchInput" class="text-input" placeholder="Search prompts (press / to focus)...">
+          </div>
+          <button class="btn-secondary" id="btnNewPromptModal">+ New</button>
         </div>
-        <button class="btn-secondary" id="btnNewPromptModal">+ New</button>
+
+        <div class="category-filter-strip" id="categoryFilterStrip">
+          <button class="cat-filter-btn active" data-cat="all">All</button>
+          <button class="cat-filter-btn" data-cat="favorite">★ Starred</button>
+          <button class="cat-filter-btn" data-cat="engineering">Engineering</button>
+          <button class="cat-filter-btn" data-cat="reasoning">Reasoning</button>
+          <button class="cat-filter-btn" data-cat="analysis">Analysis</button>
+          <button class="cat-filter-btn" data-cat="system">System</button>
+        </div>
+
+        <div class="prompt-cards-list" id="promptCardsList">
+          <!-- Rendered via JS -->
+        </div>
       </div>
 
-      <div class="category-filter-strip" id="categoryFilterStrip">
-        <button class="cat-filter-btn active" data-cat="all">All</button>
-        <button class="cat-filter-btn" data-cat="favorite">★ Starred</button>
-        <button class="cat-filter-btn" data-cat="engineering">Engineering</button>
-        <button class="cat-filter-btn" data-cat="reasoning">Reasoning</button>
-        <button class="cat-filter-btn" data-cat="analysis">Analysis</button>
-        <button class="cat-filter-btn" data-cat="system">System</button>
-      </div>
-
-      <div class="prompt-cards-list" id="promptCardsList">
-        <!-- Rendered via JS -->
+      <!-- View B: Recent History -->
+      <div id="libraryHistoryView" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">LAST 30 OPTIMIZATIONS</span>
+          <button class="mini-btn" id="btnClearHistory">Clear All</button>
+        </div>
+        <div class="history-list" id="historyList">
+          <!-- Rendered via JS -->
+        </div>
       </div>
     </section>
 
-    <!-- TAB 3: HISTORY -->
-    <section class="tab-content" id="tab-history" role="tabpanel">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <span class="section-label" style="margin-bottom: 0;">Recent Optimizations</span>
-        <button class="mini-btn" id="btnClearHistory">Clear All</button>
-      </div>
-      <div class="history-list" id="historyList">
-        <!-- Rendered via JS -->
-      </div>
-    </section>
+    <!-- Slide-over / Modal: Settings & Diagnostics -->
+    <div class="modal-overlay" id="settingsModal">
+      <div class="modal-card" style="max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+          <span class="modal-title">Settings &amp; Configuration</span>
+          <button class="mini-btn" id="btnCloseSettingsModal">&times;</button>
+        </div>
 
-    <!-- TAB 4: SETTINGS -->
-    <section class="tab-content" id="tab-settings" role="tabpanel">
-      <div class="settings-section">
-        <h3>Google Gemini API Key</h3>
+        <!-- API Key -->
         <div class="settings-field">
-          <label class="settings-label" for="settingsApiKey">API Key</label>
-          <input type="password" id="settingsApiKey" class="text-input" placeholder="AIzaSy...">
+          <label class="settings-label" for="settingsApiKey">Google Gemini API Key</label>
+          <div style="display: flex; gap: 6px;">
+            <input type="password" id="settingsApiKey" class="text-input" placeholder="AIzaSy...">
+            <button class="btn-secondary" id="btnTestKey">Verify</button>
+          </div>
+          <div id="keyStatusAlert" style="margin-top: 4px; font-size: 11px; display: none;"></div>
         </div>
-        <div style="display: flex; gap: 6px; margin-top: 6px;">
-          <button class="btn-secondary" id="btnTestKey">Test Key</button>
-          <button class="btn-primary" id="btnSaveKey" style="width: auto; padding: 6px 12px;">Save</button>
-        </div>
-        <div id="keyStatusAlert" style="margin-top: 8px; font-size: 11.5px; display: none;"></div>
-      </div>
 
-      <div class="settings-section">
-        <h3>Model Selection</h3>
-        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">PromptOptimizer leverages low-latency Google Gemini models for fast iterations:</p>
-        <div class="radio-group" id="modelRadioGroup">
-          <label class="radio-option">
-            <input type="radio" name="modelOption" value="gemini-1.5-flash" checked>
-            <div class="radio-text">
-              <span class="radio-title">Gemini 1.5 Flash <span class="tag-badge">Default</span></span>
-              <span class="radio-desc">High speed, 1M context, cost-efficient</span>
-            </div>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="modelOption" value="gemini-2.5-flash">
-            <div class="radio-text">
-              <span class="radio-title">Gemini 2.5 Flash <span class="tag-badge">Next-Gen</span></span>
-              <span class="radio-desc">Advanced reasoning & low latency</span>
-            </div>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="modelOption" value="gemini-2.0-flash">
-            <div class="radio-text">
-              <span class="radio-title">Gemini 2.0 Flash</span>
-              <span class="radio-desc">High throughput, quick completions</span>
-            </div>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="modelOption" value="gemini-1.5-pro">
-            <div class="radio-text">
-              <span class="radio-title">Gemini 1.5 Pro</span>
-              <span class="radio-desc">Multi-step deep analytical reasoning</span>
-            </div>
-          </label>
+        <!-- Model Picker -->
+        <div class="settings-field">
+          <label class="settings-label">Model Selection</label>
+          <div class="radio-group" id="modelRadioGroup">
+            <label class="radio-option">
+              <input type="radio" name="modelOption" value="gemini-1.5-flash" checked>
+              <div class="radio-text">
+                <span class="radio-title">Gemini 1.5 Flash <span class="tag-badge">Default</span></span>
+                <span class="radio-desc">High speed, 1M context, low latency</span>
+              </div>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="modelOption" value="gemini-2.5-flash">
+              <div class="radio-text">
+                <span class="radio-title">Gemini 2.5 Flash <span class="tag-badge">Next-Gen</span></span>
+                <span class="radio-desc">Advanced reasoning with high throughput</span>
+              </div>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="modelOption" value="gemini-1.5-pro">
+              <div class="radio-text">
+                <span class="radio-title">Gemini 1.5 Pro</span>
+                <span class="radio-desc">Deep analytical multi-step reasoning</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Permissions Diagnostics Section -->
+        <div class="settings-field">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <label class="settings-label">Permissions &amp; Health</label>
+            <button class="mini-btn" id="btnRequestAllPerms" style="color: var(--accent);">Request Missing</button>
+          </div>
+          <div class="perm-diag-list" id="permDiagList">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Custom Instructions -->
+        <div class="settings-field">
+          <label class="settings-label" for="settingsSystemInstructions">Custom System Guidelines (Optional)</label>
+          <textarea id="settingsSystemInstructions" class="text-area" style="min-height: 60px;" placeholder="e.g. Always write code with type annotations. Prioritize concise answers."></textarea>
+        </div>
+
+        <!-- Backup & Reset -->
+        <div class="settings-field">
+          <label class="settings-label">Data Management</label>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button class="btn-secondary" id="btnExportData">Export (JSON)</button>
+            <button class="btn-secondary" id="btnImportDataTrigger">Import</button>
+            <input type="file" id="importFileInput" accept=".json" style="display: none;">
+            <button class="btn-secondary" id="btnResetAllData" style="color: var(--danger);">Reset Storage</button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-primary" id="btnSaveAllSettings" style="width: auto; padding: 6px 14px;">Save Settings</button>
         </div>
       </div>
-
-      <div class="settings-section">
-        <h3>Custom System Instructions</h3>
-        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Optional personal constraints applied to every optimization:</p>
-        <textarea id="settingsSystemInstructions" class="text-area" style="min-height: 70px;" placeholder="e.g. Always write Python with type hints. Prioritize concise tables."></textarea>
-        <button class="btn-secondary" id="btnSaveSystemInstructions" style="margin-top: 6px;">Save Instructions</button>
-      </div>
-
-      <div class="settings-section">
-        <h3>Data Management</h3>
-        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-          <button class="btn-secondary" id="btnExportData">Export Prompts (JSON)</button>
-          <button class="btn-secondary" id="btnImportDataTrigger">Import Prompts</button>
-          <input type="file" id="importFileInput" accept=".json" style="display: none;">
-          <button class="btn-secondary" id="btnResetAllData" style="color: var(--danger);">Reset Data</button>
-        </div>
-      </div>
-    </section>
+    </div>
 
     <!-- Save / Edit Prompt Modal -->
     <div class="modal-overlay" id="savePromptModal">
       <div class="modal-card">
         <div class="modal-header">
-          <span class="modal-title" id="saveModalTitle">Save to Prompt Library</span>
+          <span class="modal-title" id="saveModalTitle">Save Prompt</span>
           <button class="mini-btn" id="btnCloseSaveModal">&times;</button>
         </div>
         <div class="settings-field">
           <label class="settings-label" for="saveModalPromptTitle">Prompt Title</label>
-          <input type="text" id="saveModalPromptTitle" class="text-input" placeholder="e.g. Senior Security Auditor">
+          <input type="text" id="saveModalPromptTitle" class="text-input" placeholder="e.g. Code Review & Security Audit">
         </div>
         <div class="settings-field">
           <label class="settings-label" for="saveModalCategory">Category</label>
@@ -277,7 +293,7 @@
         </div>
         <div class="settings-field">
           <label class="settings-label" for="saveModalDescription">Brief Description</label>
-          <input type="text" id="saveModalDescription" class="text-input" placeholder="What does this prompt achieve?">
+          <input type="text" id="saveModalDescription" class="text-input" placeholder="What does this prompt do?">
         </div>
         <div class="modal-footer">
           <button class="btn-secondary" id="btnCancelSaveModal">Cancel</button>
@@ -287,7 +303,7 @@
     </div>
 
     <!-- Toast Notification -->
-    <div class="toast" id="toastMessage">Prompt copied to clipboard!</div>
+    <div class="toast" id="toastMessage">Copied to clipboard</div>
   </div>
 
   <script type="module" src="sidepanel.js"></script>
