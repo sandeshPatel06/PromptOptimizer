@@ -1,6 +1,7 @@
 /**
  * PromptOptimizer - Main UI Controller
  * Built strictly according to Modern Web Guidance (native <dialog>, IME safety, container-aware).
+ * With dynamic model discovery and auto-recovery from API version differences.
  */
 
 import { Storage } from './lib/storage.js';
@@ -107,6 +108,11 @@ async function init() {
 
   await checkPermissionsHealth();
 
+  // Dynamically discover supported models for this key
+  if (appState.apiKey) {
+    populateDynamicModels().catch(console.warn);
+  }
+
   if (appState.pendingPrompt) {
     elements.rawPromptInput.value = appState.pendingPrompt;
     updateCharCounter();
@@ -115,6 +121,37 @@ async function init() {
 
   setupEventListeners();
   renderLibrary();
+}
+
+/**
+ * Dynamically queries Google ModelService to list models actually available on this key
+ */
+async function populateDynamicModels() {
+  if (!appState.apiKey) return;
+  const models = await GeminiApi.getAvailableModels(appState.apiKey);
+  if (!models || models.length === 0) return;
+
+  // Filter models relevant to text generation
+  const genModels = models.filter((m) => m.includes('gemini') || m.includes('flash') || m.includes('pro'));
+  if (genModels.length === 0) return;
+
+  elements.headerModelSelect.innerHTML = '';
+  genModels.forEach((m) => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    const label = m.replace(/^gemini-/, '').replace(/-/g, ' ');
+    opt.textContent = label;
+    elements.headerModelSelect.appendChild(opt);
+  });
+
+  // Verify active model exists in supported list
+  if (!genModels.includes(appState.model)) {
+    const resolved = await GeminiApi.resolveWorkingModel(appState.apiKey, appState.model);
+    appState.model = resolved;
+    await Storage.set({ model: resolved });
+  }
+
+  elements.headerModelSelect.value = appState.model;
 }
 
 async function checkPermissionsHealth() {
@@ -325,6 +362,7 @@ function setupEventListeners() {
       await Storage.set({ apiKey: key, hasCompletedOnboarding: true });
       elements.settingsApiKey.value = key;
       updateApiStatusUI();
+      await populateDynamicModels();
       showToast('Gemini connected');
     } else {
       alert(`Invalid key: ${validation.error}`);
@@ -445,6 +483,7 @@ function setupEventListeners() {
     const result = await GeminiApi.validateApiKey(key);
     if (result.valid) {
       showKeyStatus('✓ Key is valid', 'success');
+      await populateDynamicModels();
     } else {
       showKeyStatus(`✗ ${result.error}`, 'danger');
     }
@@ -467,6 +506,9 @@ function setupEventListeners() {
 
     updateApiStatusUI();
     updateModelDropdown();
+    if (key) {
+      await populateDynamicModels();
+    }
     elements.settingsModal.close();
     showToast('Settings saved');
   });
@@ -520,7 +562,6 @@ function setupEventListeners() {
 
   // Global Keyboard Shortcuts (with IME-safe enter submit per modern-web-guidance)
   document.addEventListener('keydown', (e) => {
-    // IME composition check per ime-safe-enter-submit guide
     if (e.isComposing || e.keyCode === 229) {
       return;
     }
@@ -587,6 +628,13 @@ async function executeOptimization() {
     });
 
     currentOptimizationResult = result;
+
+    // If auto-resolved to a different working model (e.g. gemini-2.0-flash or gemini-1.5-flash-latest)
+    if (result.usedModel && result.usedModel !== appState.model) {
+      appState.model = result.usedModel;
+      await Storage.set({ model: result.usedModel });
+      updateModelDropdown();
+    }
 
     elements.resultCard.style.display = 'flex';
     elements.resultOutput.textContent = result.optimizedPrompt;
