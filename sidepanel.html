@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PromptOptimizer</title>
+  
+  <!-- Google Fonts CDN (Plus Jakarta Sans & JetBrains Mono) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="sidepanel.css">
 </head>
 <body>
@@ -95,14 +101,20 @@
         <kbd class="kbd-hint">⌘↵</kbd>
       </button>
 
-      <!-- Output Container -->
+      <!-- Output Container with Markdown Preview Toggle -->
       <div class="output-panel" id="resultCard" style="display: none;">
         <div class="output-header">
-          <div class="output-stats">
+          <div class="output-left-meta">
+            <!-- Preview / Raw Toggle Segment -->
+            <div class="view-mode-toggle" role="group" aria-label="Display mode">
+              <button class="view-mode-btn active" id="btnViewPreview" type="button">Preview</button>
+              <button class="view-mode-btn" id="btnViewRaw" type="button">Raw</button>
+            </div>
             <span class="pill-metric" id="resultStatsBadge">~0 tokens</span>
           </div>
+
           <div class="output-toolset">
-            <button class="tool-btn" id="btnCopyResult" title="Copy to clipboard">
+            <button class="tool-btn" id="btnCopyResult" title="Copy prompt to clipboard">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
               </svg>
@@ -129,16 +141,19 @@
           <div class="vars-tokens" id="variablesContainer"></div>
         </div>
 
-        <!-- Formatted Prompt Body -->
-        <div class="output-content" id="resultOutput"></div>
+        <!-- Rendered Markdown Preview Container -->
+        <div class="output-content md-rendered-body" id="resultPreview"></div>
 
-        <!-- Optional Changelog Summary -->
+        <!-- Raw Textarea/Pre for Raw View -->
+        <div class="output-content raw-body" id="resultRaw" style="display: none;"></div>
+
+        <!-- Modifications Applied Drawer -->
         <details class="changelog-drawer" id="improvementsDrawer">
           <summary id="improvementsSummary">Modifications applied</summary>
           <ul class="changelog-items" id="rationaleList"></ul>
         </details>
 
-        <!-- Test Sandbox -->
+        <!-- Test Sandbox with Markdown Preview -->
         <div class="test-sandbox" id="runnerDrawer" style="display: none;">
           <div class="test-sandbox-head">
             <span>Test Inputs</span>
@@ -149,7 +164,18 @@
             <span id="testBtnSpinner" class="spinner" style="display: none;" aria-hidden="true"></span>
             <span id="testBtnText">Execute Test</span>
           </button>
-          <div class="sandbox-result" id="runnerOutput" style="display: none;"></div>
+          
+          <div class="sandbox-output-wrapper" id="runnerOutputWrapper" style="display: none;">
+            <div class="sandbox-output-head">
+              <span class="sandbox-out-title">Response</span>
+              <div class="view-mode-toggle mini">
+                <button class="view-mode-btn active" id="btnSandboxPreview" type="button">Preview</button>
+                <button class="view-mode-btn" id="btnSandboxRaw" type="button">Raw</button>
+              </div>
+            </div>
+            <div class="sandbox-result md-rendered-body" id="runnerOutputPreview"></div>
+            <div class="sandbox-result raw-body" id="runnerOutputRaw" style="display: none;"></div>
+          </div>
         </div>
       </div>
     </main>

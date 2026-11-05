@@ -50,31 +50,38 @@ Built entirely with standard WebExtension APIs, CSS custom properties, and nativ
 ## Key Capabilities
 
 ### 1. Distraction-Free, Tactile Sidebar
-- **Zero AI-Slop Design**: Built without generic backdrop-blur glassmorphism, bloated card grids, or purple gradients. Uses deep graphite canvases (`#090a0d`), safety amber accents (`#f59e0b`), and 1px precision hairline borders.
+- **Zero AI-Slop Design**: Built without generic backdrop-blur glassmorphism, bloated card grids, or purple gradients. Uses deep obsidian/charcoal surfaces (`#090b0e`, `#11141a`), calibrated solar amber accents (`#f59e0b`), and precision hairline borders.
+- **Bespoke Typography**: Integrated via Google CDN with **Plus Jakarta Sans** for typographic clarity and **JetBrains Mono** for code and variable expressions, compliant with Manifest V3 CSP.
 - **Native Browser Side Panel**: Integrates with Chrome's native `sidePanel` API and Firefox's `sidebar_action` API to sit alongside active tabs without consuming window real estate.
 - **Full Workstation Mode**: Pop out into a dedicated full-screen tab anytime with one click.
 
-### 2. Direct-to-Google Privacy Architecture
+### 2. Markdown Preview & Raw Toggle
+- **Safe Markdown Rendering**: Real-time rendering of headers, code blocks with syntax tags, tables, blockquotes, ordered/unordered lists, and highlighted `{{variable}}` pills.
+- **Preview / Raw Mode**: Seamless toggle between formatted Markdown visual presentation and raw monospace output in both the optimizer result and the test sandbox.
+- **Strict XSS Isolation**: Sanitizes all input through entity encoding and placeholder tokens before markdown compilation.
+
+### 3. Direct-to-Google Privacy Architecture
 - **Client-Only Architecture**: All requests route directly from your local browser to Google's official Generative Language API (`https://generativelanguage.googleapis.com`).
 - **No Third-Party Proxies**: No backend servers, no analytics, no external telemetry.
 - **Local Credential Storage**: Your Google Gemini API key and prompt library are stored exclusively in your browser's local sandbox (`chrome.storage.local` or `browser.storage.local`).
 
-### 3. Low-Latency Gemini Flash Engine
-- **Default Models**: Configured for `gemini-1.5-flash` and `gemini-2.5-flash` to deliver sub-second optimization speed, high throughput, and cost-efficient iteration.
-- **Configurable**: Easily switchable to `gemini-2.0-flash` or `gemini-1.5-pro` in Settings.
+### 4. Low-Latency Gemini Engine with Dynamic Model Discovery
+- **Self-Healing Model Fallback**: Automatically discovers and lists valid models for your API key via `ModelService.ListModels`, preventing `404 Not Found` API version mismatches.
+- **Multi-Model Support**: Defaults to fast models (`gemini-2.0-flash`, `gemini-1.5-flash-latest`) and seamlessly adapts to your account's tier.
+- **Configurable**: Easily switchable via topbar dropdown or Settings drawer.
 
-### 4. Specialized Optimization Directives
-- **🧠 Reasoning & CoT**: Enforces rigorous chain-of-thought deconstruction, edge-case analysis, and clear delineation between thinking and final output.
-- **💻 Code & Systems**: Enforces explicit runtime types, error propagation contracts, asymptotic complexity bounds, and clean code blocks.
-- **⚡ Direct & Crisp**: Strips pleasantries, conversational filler, and vague buzzwords; structures queries into dense imperative commands.
-- **📋 Structured & JSON**: Generates deterministic JSON/Markdown schemas, validation rules, null-handling specifications, and negative constraints.
-- **🎭 Expert Persona**: Establishes world-class domain authority framing and rigorous decision criteria.
+### 5. Specialized Optimization Directives
+- **Reasoning & CoT**: Enforces rigorous chain-of-thought deconstruction, edge-case analysis, and clear delineation between thinking and final output.
+- **Code & Systems**: Enforces explicit runtime types, error propagation contracts, asymptotic complexity bounds, and clean code blocks.
+- **Direct & Crisp**: Strips pleasantries, conversational filler, and vague buzzwords; structures queries into dense imperative commands.
+- **Structured & JSON**: Generates deterministic JSON/Markdown schemas, validation rules, null-handling specifications, and negative constraints.
+- **Expert Persona**: Establishes world-class domain authority framing and rigorous decision criteria.
 
-### 5. Interactive Test Sandbox & Variable Detection
+### 6. Interactive Test Sandbox & Variable Detection
 - **Auto-Parameterization**: Automatically identifies dynamic placeholders (e.g. `{{language}}`, `{{code_snippet}}`, `{{schema}}`).
-- **In-Sidebar Execution**: Test the generated prompt live inside the sidebar before deploying. PromptOptimizer renders interactive input fields for each variable, substitutes values, executes against Gemini Flash, and displays the response.
+- **In-Sidebar Execution**: Test the generated prompt live inside the sidebar before deploying. PromptOptimizer renders interactive input fields for each variable, substitutes values, executes against Gemini Flash, and displays the response with Markdown preview.
 
-### 6. Portable Prompt Library & History
+### 7. Portable Prompt Library & History
 - **Searchable Repository**: Organize prompts by category (`Engineering`, `Reasoning`, `Analysis`, `Writing`, `System`) and tags.
 - **Starter Curations**: Pre-seeded with production-grade templates (Senior Code Review & Security Audit, First-Principles Explainer, Strict JSON Schema Extractor, and Bug Triage & Surgical Patch).
 - **Recent History**: Automatically preserves previous optimizations for one-click rollback.

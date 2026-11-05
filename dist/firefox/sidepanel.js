@@ -8,6 +8,7 @@ import { Storage } from './lib/storage.js';
 import { GeminiApi } from './lib/gemini.js';
 import { Permissions } from './lib/permissions.js';
 import { OPTIMIZATION_PRESETS, detectVariables, fillVariables, countMetrics } from './lib/prompts.js';
+import { renderMarkdown } from './lib/markdown.js';
 
 const elements = {
   headerModelSelect: document.getElementById('headerModelSelect'),
@@ -36,7 +37,10 @@ const elements = {
   
   resultCard: document.getElementById('resultCard'),
   resultStatsBadge: document.getElementById('resultStatsBadge'),
-  resultOutput: document.getElementById('resultOutput'),
+  btnViewPreview: document.getElementById('btnViewPreview'),
+  btnViewRaw: document.getElementById('btnViewRaw'),
+  resultPreview: document.getElementById('resultPreview'),
+  resultRaw: document.getElementById('resultRaw'),
   variablesBar: document.getElementById('variablesBar'),
   variablesContainer: document.getElementById('variablesContainer'),
   improvementsDrawer: document.getElementById('improvementsDrawer'),
@@ -52,7 +56,11 @@ const elements = {
   btnExecuteTest: document.getElementById('btnExecuteTest'),
   testBtnText: document.getElementById('testBtnText'),
   testBtnSpinner: document.getElementById('testBtnSpinner'),
-  runnerOutput: document.getElementById('runnerOutput'),
+  runnerOutputWrapper: document.getElementById('runnerOutputWrapper'),
+  btnSandboxPreview: document.getElementById('btnSandboxPreview'),
+  btnSandboxRaw: document.getElementById('btnSandboxRaw'),
+  runnerOutputPreview: document.getElementById('runnerOutputPreview'),
+  runnerOutputRaw: document.getElementById('runnerOutputRaw'),
   
   librarySearchInput: document.getElementById('librarySearchInput'),
   filterPills: document.querySelectorAll('.filter-pill'),
@@ -409,6 +417,18 @@ function setupEventListeners() {
   // Optimize
   elements.btnOptimize.addEventListener('click', executeOptimization);
 
+  // View Mode Toggles (Result)
+  if (elements.btnViewPreview && elements.btnViewRaw) {
+    elements.btnViewPreview.addEventListener('click', () => setResultViewMode('preview'));
+    elements.btnViewRaw.addEventListener('click', () => setResultViewMode('raw'));
+  }
+
+  // View Mode Toggles (Sandbox Output)
+  if (elements.btnSandboxPreview && elements.btnSandboxRaw) {
+    elements.btnSandboxPreview.addEventListener('click', () => setSandboxViewMode('preview'));
+    elements.btnSandboxRaw.addEventListener('click', () => setSandboxViewMode('raw'));
+  }
+
   // Copy Result
   elements.btnCopyResult.addEventListener('click', () => {
     if (!currentOptimizationResult) return;
@@ -637,7 +657,13 @@ async function executeOptimization() {
     }
 
     elements.resultCard.style.display = 'flex';
-    elements.resultOutput.textContent = result.optimizedPrompt;
+    if (elements.resultPreview) {
+      elements.resultPreview.innerHTML = renderMarkdown(result.optimizedPrompt);
+    }
+    if (elements.resultRaw) {
+      elements.resultRaw.textContent = result.optimizedPrompt;
+    }
+    setResultViewMode('preview');
     elements.resultStatsBadge.textContent = `~${result.metrics.estimatedTokens} tokens`;
 
     elements.variablesContainer.innerHTML = '';
@@ -684,11 +710,46 @@ async function executeOptimization() {
   }
 }
 
+function setResultViewMode(mode) {
+  if (mode === 'preview') {
+    elements.btnViewPreview?.classList.add('active');
+    elements.btnViewRaw?.classList.remove('active');
+    if (elements.resultPreview) elements.resultPreview.style.display = 'block';
+    if (elements.resultRaw) elements.resultRaw.style.display = 'none';
+  } else {
+    elements.btnViewPreview?.classList.remove('active');
+    elements.btnViewRaw?.classList.add('active');
+    if (elements.resultPreview) elements.resultPreview.style.display = 'none';
+    if (elements.resultRaw) elements.resultRaw.style.display = 'block';
+  }
+}
+
+function setSandboxViewMode(mode) {
+  if (mode === 'preview') {
+    elements.btnSandboxPreview?.classList.add('active');
+    elements.btnSandboxRaw?.classList.remove('active');
+    if (elements.runnerOutputPreview) elements.runnerOutputPreview.style.display = 'block';
+    if (elements.runnerOutputRaw) elements.runnerOutputRaw.style.display = 'none';
+  } else {
+    elements.btnSandboxPreview?.classList.remove('active');
+    elements.btnSandboxRaw?.classList.add('active');
+    if (elements.runnerOutputPreview) elements.runnerOutputPreview.style.display = 'none';
+    if (elements.runnerOutputRaw) elements.runnerOutputRaw.style.display = 'block';
+  }
+}
+
 function renderRunnerInputs() {
   if (!currentOptimizationResult) return;
   elements.runnerInputsGrid.innerHTML = '';
-  elements.runnerOutput.style.display = 'none';
-  elements.runnerOutput.textContent = '';
+  if (elements.runnerOutputWrapper) {
+    elements.runnerOutputWrapper.style.display = 'none';
+  }
+  if (elements.runnerOutputPreview) {
+    elements.runnerOutputPreview.innerHTML = '';
+  }
+  if (elements.runnerOutputRaw) {
+    elements.runnerOutputRaw.textContent = '';
+  }
 
   const vars = currentOptimizationResult.detectedVariables;
   if (vars.length === 0) {
@@ -725,8 +786,16 @@ async function executePromptTest() {
   elements.btnExecuteTest.disabled = true;
   elements.testBtnSpinner.style.display = 'inline-block';
   elements.testBtnText.textContent = 'Running...';
-  elements.runnerOutput.style.display = 'block';
-  elements.runnerOutput.textContent = 'Executing with Gemini...';
+  if (elements.runnerOutputWrapper) {
+    elements.runnerOutputWrapper.style.display = 'block';
+  }
+  if (elements.runnerOutputPreview) {
+    elements.runnerOutputPreview.innerHTML = '<span style="color: var(--text-muted);">Executing with Gemini...</span>';
+  }
+  if (elements.runnerOutputRaw) {
+    elements.runnerOutputRaw.textContent = 'Executing with Gemini...';
+  }
+  setSandboxViewMode('preview');
 
   try {
     const output = await GeminiApi.testPrompt({
@@ -734,9 +803,20 @@ async function executePromptTest() {
       model: appState.model,
       promptText: filledPrompt
     });
-    elements.runnerOutput.textContent = output;
+    if (elements.runnerOutputPreview) {
+      elements.runnerOutputPreview.innerHTML = renderMarkdown(output);
+    }
+    if (elements.runnerOutputRaw) {
+      elements.runnerOutputRaw.textContent = output;
+    }
   } catch (err) {
-    elements.runnerOutput.textContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
+    const errMsg = `Error: ${err instanceof Error ? err.message : String(err)}`;
+    if (elements.runnerOutputPreview) {
+      elements.runnerOutputPreview.innerHTML = `<span style="color: var(--danger);">${errMsg}</span>`;
+    }
+    if (elements.runnerOutputRaw) {
+      elements.runnerOutputRaw.textContent = errMsg;
+    }
   } finally {
     elements.btnExecuteTest.disabled = false;
     elements.testBtnSpinner.style.display = 'none';
