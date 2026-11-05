@@ -1,7 +1,7 @@
 /**
- * PromptOptimizer - Minimalist Swiss Dark UI System
- * Pure CSS with zero AI-slop markers: no emojis, no glassmorphism blur, no gradient text.
- * 100% Responsive from 260px narrow sidebar up to full desktop tab.
+ * PromptOptimizer - Modern Web Guidance & Swiss Minimalist Design System
+ * Baseline native CSS with container queries, native <dialog> top-layer overlays,
+ * and zero AI-slop markers (no emojis, no glassmorphism blur, no gradient text).
  */
 
 :root {
@@ -27,9 +27,7 @@
   --accent-border: #5e3b08;
 
   --success: #10b981;
-  --success-surface: #0a2519;
   --danger: #ef4444;
-  --danger-surface: #281013;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -57,6 +55,19 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Accessibility helper */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
@@ -73,8 +84,9 @@ html, body {
   background: var(--border-strong);
 }
 
-/* Shell Layout */
+/* Container-Aware Root Shell (per size-aware-styling guide) */
 .shell {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -88,7 +100,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 12px;
+  padding: 8px 12px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
   user-select: none;
@@ -192,7 +204,7 @@ html, body {
   transform: translateY(1px);
 }
 
-/* 2-Way View Switcher */
+/* Navigation Segment */
 .segment-nav {
   display: flex;
   background: var(--bg-surface);
@@ -228,7 +240,7 @@ html, body {
   font-weight: 600;
 }
 
-/* Alert Bar */
+/* Alert Banner */
 .alert-bar {
   display: flex;
   align-items: center;
@@ -274,7 +286,7 @@ html, body {
   gap: 6px;
 }
 
-/* Panes */
+/* Main Panes */
 .pane {
   flex: 1;
   overflow-y: auto;
@@ -791,23 +803,27 @@ html, body {
   line-height: 1.4;
 }
 
-/* Drawers & Modals */
-.drawer-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 14px;
-  z-index: 100;
+/* Native HTML5 <dialog> (per modern-web-guidance dialog & prevent-page-scroll) */
+dialog.native-modal {
+  margin: auto;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  max-width: 90vw;
 }
 
-.drawer-overlay.active {
-  display: flex;
+dialog.native-modal:modal {
+  overscroll-behavior: contain;
 }
 
-.drawer-card {
+dialog.native-modal::backdrop {
+  background: rgba(0, 0, 0, 0.72);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.dialog-inner {
   width: 100%;
   max-width: 380px;
   max-height: 85vh;
@@ -817,13 +833,14 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
 }
 
-.drawer-card.compact {
+dialog.compact .dialog-inner {
   max-width: 340px;
 }
 
-.drawer-header {
+.dialog-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -831,13 +848,13 @@ html, body {
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.drawer-title {
+.dialog-title {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.drawer-body {
+.dialog-body {
   padding: 12px;
   overflow-y: auto;
   display: flex;
@@ -845,7 +862,7 @@ html, body {
   gap: 10px;
 }
 
-.drawer-footer {
+.dialog-footer {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
@@ -994,4 +1011,23 @@ html, body {
   padding: 24px 12px;
   color: var(--text-muted);
   font-size: 11.5px;
+}
+
+/* Container Queries for True Responsiveness (per size-aware-styling guide) */
+@container (min-width: 480px) {
+  .buffer-textarea {
+    min-height: 140px;
+  }
+  .pane {
+    padding: 14px 18px;
+    gap: 12px;
+  }
+}
+
+@container (min-width: 768px) {
+  .pane {
+    max-width: 720px;
+    margin: 0 auto;
+    width: 100%;
+  }
 }

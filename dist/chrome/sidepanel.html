@@ -8,10 +8,10 @@
 </head>
 <body>
   <div class="shell">
-    <!-- Top Header -->
+    <!-- Topbar -->
     <header class="topbar">
       <div class="topbar-left">
-        <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <polygon points="12 2 15 8.5 22 12 15 15.5 12 22 9 15.5 2 12 9 8.5 12 2" />
         </svg>
         <span class="brand-title">PromptOptimizer</span>
@@ -21,6 +21,7 @@
         <!-- Model Selector Dropdown -->
         <div class="model-select-wrapper" title="Select Gemini model">
           <span class="status-indicator" id="statusDot"></span>
+          <label for="headerModelSelect" class="visually-hidden">Active Gemini Model</label>
           <select id="headerModelSelect" class="header-select">
             <option value="gemini-1.5-flash">1.5 Flash</option>
             <option value="gemini-2.5-flash">2.5 Flash</option>
@@ -30,26 +31,26 @@
         </div>
 
         <button class="action-btn" id="btnPopOut" title="Open in new tab" aria-label="Open in new tab">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
           </svg>
         </button>
 
         <button class="action-btn" id="btnHeaderSettings" title="Settings" aria-label="Settings">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
         </button>
       </div>
     </header>
 
-    <!-- Clean Navigation Segment -->
-    <nav class="segment-nav">
-      <button class="nav-segment-btn active" data-tab="tab-optimizer">Refine</button>
-      <button class="nav-segment-btn" data-tab="tab-library">Library</button>
+    <!-- Navigation Switcher -->
+    <nav class="segment-nav" role="tablist">
+      <button class="nav-segment-btn active" data-tab="tab-optimizer" role="tab" aria-selected="true">Refine</button>
+      <button class="nav-segment-btn" data-tab="tab-library" role="tab" aria-selected="false">Library</button>
     </nav>
 
-    <!-- Missing Permission Alert (Only shows if required network access is absent) -->
+    <!-- Permission Request Banner -->
     <div class="alert-bar" id="permBanner" style="display: none;">
       <span>Grant network access to Google Gemini</span>
       <button class="btn-xs" id="btnGrantBannerPerm">Allow</button>
@@ -62,20 +63,20 @@
         <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" class="link-hint">Get key &rarr;</a>
       </div>
       <div class="setup-row">
+        <label for="onboardingKeyInput" class="visually-hidden">Gemini API Key</label>
         <input type="password" id="onboardingKeyInput" class="input-flat" placeholder="AIzaSy..." autocomplete="off">
         <button class="btn-solid" id="btnSaveOnboardingKey">Save</button>
       </div>
     </div>
 
     <!-- TAB 1: OPTIMIZER (REFINE) -->
-    <main class="pane active" id="tab-optimizer">
+    <main class="pane active" id="tab-optimizer" role="tabpanel">
       <!-- Strategy Selector -->
-      <div class="mode-selector" id="presetsContainer">
-        <!-- Injected via JS (Reasoning, Code, Direct, JSON, Persona) -->
-      </div>
+      <div class="mode-selector" id="presetsContainer"></div>
 
       <!-- Editor Buffer -->
       <div class="buffer-box">
+        <label for="rawPromptInput" class="visually-hidden">Prompt to optimize</label>
         <textarea id="rawPromptInput" class="buffer-textarea" placeholder="Paste a draft or describe what you want the prompt to accomplish..."></textarea>
         
         <div class="buffer-footer">
@@ -89,7 +90,7 @@
 
       <!-- Main Action Bar -->
       <button class="btn-primary-action" id="btnOptimize">
-        <span id="optimizeBtnSpinner" class="spinner" style="display: none;"></span>
+        <span id="optimizeBtnSpinner" class="spinner" style="display: none;" aria-hidden="true"></span>
         <span id="optimizeBtnText">Refine Prompt</span>
         <kbd class="kbd-hint">⌘↵</kbd>
       </button>
@@ -102,19 +103,19 @@
           </div>
           <div class="output-toolset">
             <button class="tool-btn" id="btnCopyResult" title="Copy to clipboard">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
               </svg>
               <span>Copy</span>
             </button>
             <button class="tool-btn" id="btnSaveToLibrary" title="Save prompt">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
               </svg>
               <span>Save</span>
             </button>
             <button class="tool-btn" id="btnToggleTestDrawer" title="Test with inputs">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <polygon points="5 3 19 12 5 21 5 3"/>
               </svg>
               <span>Test</span>
@@ -141,11 +142,11 @@
         <div class="test-sandbox" id="runnerDrawer" style="display: none;">
           <div class="test-sandbox-head">
             <span>Test Inputs</span>
-            <button class="btn-text" id="btnCloseRunner">&times;</button>
+            <button class="btn-text" id="btnCloseRunner" aria-label="Close test inputs">&times;</button>
           </div>
           <div class="sandbox-fields" id="runnerInputsGrid"></div>
           <button class="btn-secondary-action" id="btnExecuteTest">
-            <span id="testBtnSpinner" class="spinner" style="display: none;"></span>
+            <span id="testBtnSpinner" class="spinner" style="display: none;" aria-hidden="true"></span>
             <span id="testBtnText">Execute Test</span>
           </button>
           <div class="sandbox-result" id="runnerOutput" style="display: none;"></div>
@@ -154,9 +155,10 @@
     </main>
 
     <!-- TAB 2: LIBRARY -->
-    <section class="pane" id="tab-library">
+    <section class="pane" id="tab-library" role="tabpanel">
       <!-- Search & Controls -->
       <div class="library-top">
+        <label for="librarySearchInput" class="visually-hidden">Search saved prompts</label>
         <input type="text" id="librarySearchInput" class="input-flat search-box" placeholder="Search prompts (press /)...">
         <button class="btn-flat" id="btnNewPromptModal">+ Add</button>
       </div>
@@ -171,20 +173,18 @@
       </div>
 
       <!-- Prompts List -->
-      <div class="library-items" id="promptCardsList">
-        <!-- Rendered via JS -->
-      </div>
+      <div class="library-items" id="promptCardsList"></div>
     </section>
 
-    <!-- Slide-in Settings Panel -->
-    <div class="drawer-overlay" id="settingsModal">
-      <div class="drawer-card">
-        <div class="drawer-header">
-          <span class="drawer-title">Settings</span>
-          <button class="btn-text" id="btnCloseSettingsModal">&times;</button>
+    <!-- Native HTML5 Dialog: Settings (Modern Web Guidance Compliant) -->
+    <dialog class="native-modal" id="settingsModal" aria-labelledby="settingsModalTitle">
+      <div class="dialog-inner">
+        <div class="dialog-header">
+          <h2 class="dialog-title" id="settingsModalTitle">Settings</h2>
+          <button class="btn-text" id="btnCloseSettingsModal" aria-label="Close settings">&times;</button>
         </div>
 
-        <div class="drawer-body">
+        <div class="dialog-body">
           <!-- API Key Section -->
           <div class="form-group">
             <label class="form-label" for="settingsApiKey">Google Gemini API Key</label>
@@ -197,7 +197,7 @@
 
           <!-- Model Choice -->
           <div class="form-group">
-            <label class="form-label">Model</label>
+            <span class="form-label">Model</span>
             <div class="options-stack" id="modelRadioGroup">
               <label class="option-row">
                 <input type="radio" name="modelOption" value="gemini-1.5-flash" checked>
@@ -226,7 +226,7 @@
           <!-- Permissions Diagnostics -->
           <div class="form-group">
             <div class="form-label-row">
-              <label class="form-label">Permissions</label>
+              <span class="form-label">Permissions</span>
               <button class="btn-text" id="btnRequestAllPerms">Grant All</button>
             </div>
             <div class="perm-list" id="permDiagList"></div>
@@ -234,13 +234,13 @@
 
           <!-- Custom Directives -->
           <div class="form-group">
-            <label class="form-label" for="settingsSystemInstructions">Custom Rules (Optional)</label>
+            <label class="form-label" for="settingsSystemInstructions">Custom Directives (Optional)</label>
             <textarea id="settingsSystemInstructions" class="input-flat textarea-flat" rows="2" placeholder="e.g. Always format responses in Markdown with TypeScript types."></textarea>
           </div>
 
           <!-- Portability -->
           <div class="form-group">
-            <label class="form-label">Library Data</label>
+            <span class="form-label">Library Data</span>
             <div class="btn-group-row">
               <button class="btn-flat" id="btnExportData">Export JSON</button>
               <button class="btn-flat" id="btnImportDataTrigger">Import JSON</button>
@@ -250,23 +250,23 @@
           </div>
         </div>
 
-        <div class="drawer-footer">
+        <div class="dialog-footer">
           <button class="btn-solid" id="btnSaveAllSettings">Save Changes</button>
         </div>
       </div>
-    </div>
+    </dialog>
 
-    <!-- Save / Edit Prompt Modal -->
-    <div class="drawer-overlay" id="savePromptModal">
-      <div class="drawer-card compact">
-        <div class="drawer-header">
-          <span class="drawer-title" id="saveModalTitle">Save Prompt</span>
-          <button class="btn-text" id="btnCloseSaveModal">&times;</button>
+    <!-- Native HTML5 Dialog: Save Prompt (Modern Web Guidance Compliant) -->
+    <dialog class="native-modal compact" id="savePromptModal" aria-labelledby="saveModalTitle">
+      <div class="dialog-inner">
+        <div class="dialog-header">
+          <h2 class="dialog-title" id="saveModalTitle">Save Prompt</h2>
+          <button class="btn-text" id="btnCloseSaveModal" aria-label="Close save dialog">&times;</button>
         </div>
-        <div class="drawer-body">
+        <div class="dialog-body">
           <div class="form-group">
             <label class="form-label" for="saveModalPromptTitle">Title</label>
-            <input type="text" id="saveModalPromptTitle" class="input-flat" placeholder="e.g. Code Review & Security Audit">
+            <input type="text" id="saveModalPromptTitle" class="input-flat" placeholder="e.g. Code Review & Security Audit" autofocus>
           </div>
           <div class="form-group">
             <label class="form-label" for="saveModalCategory">Category</label>
@@ -287,15 +287,15 @@
             <input type="text" id="saveModalDescription" class="input-flat" placeholder="Brief note on when to use this prompt">
           </div>
         </div>
-        <div class="drawer-footer">
+        <div class="dialog-footer">
           <button class="btn-flat" id="btnCancelSaveModal">Cancel</button>
           <button class="btn-solid" id="btnConfirmSavePrompt">Save</button>
         </div>
       </div>
-    </div>
+    </dialog>
 
     <!-- Toast Notification -->
-    <div class="toast-chip" id="toastMessage">Copied</div>
+    <div class="toast-chip" id="toastMessage" role="status" aria-live="polite">Copied</div>
   </div>
 
   <script type="module" src="sidepanel.js"></script>

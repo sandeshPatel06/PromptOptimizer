@@ -1,6 +1,6 @@
 /**
  * PromptOptimizer - Main UI Controller
- * Minimalist, tactile, zero-slop UI controller.
+ * Built strictly according to Modern Web Guidance (native <dialog>, IME safety, container-aware).
  */
 
 import { Storage } from './lib/storage.js';
@@ -58,6 +58,7 @@ const elements = {
   promptCardsList: document.getElementById('promptCardsList'),
   btnNewPromptModal: document.getElementById('btnNewPromptModal'),
   
+  // Native HTML5 <dialog> elements
   settingsModal: document.getElementById('settingsModal'),
   btnCloseSettingsModal: document.getElementById('btnCloseSettingsModal'),
   settingsApiKey: document.getElementById('settingsApiKey'),
@@ -229,7 +230,7 @@ function selectModelRadio(modelId) {
 }
 
 function setupEventListeners() {
-  // Model selector in topbar
+  // Topbar model selector
   elements.headerModelSelect.addEventListener('change', async (e) => {
     const selected = e.target.value;
     appState.model = selected;
@@ -242,10 +243,14 @@ function setupEventListeners() {
   elements.navSegmentBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetId = btn.dataset.tab;
-      elements.navSegmentBtns.forEach((b) => b.classList.remove('active'));
+      elements.navSegmentBtns.forEach((b) => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
       elements.panes.forEach((p) => p.classList.remove('active'));
 
       btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
       const targetPane = document.getElementById(targetId);
       if (targetPane) targetPane.classList.add('active');
 
@@ -264,17 +269,17 @@ function setupEventListeners() {
     }
   });
 
-  // Settings Modal
+  // Native HTML5 <dialog> for Settings (per modern-web-guidance dialog)
   elements.btnHeaderSettings.addEventListener('click', async () => {
     elements.settingsApiKey.value = appState.apiKey || '';
     elements.settingsSystemInstructions.value = appState.systemInstructions || '';
     selectModelRadio(appState.model);
     await checkPermissionsHealth();
-    elements.settingsModal.classList.add('active');
+    elements.settingsModal.showModal();
   });
 
   elements.btnCloseSettingsModal.addEventListener('click', () => {
-    elements.settingsModal.classList.remove('active');
+    elements.settingsModal.close();
   });
 
   // Grant banner permission
@@ -287,7 +292,7 @@ function setupEventListeners() {
     }
   });
 
-  // Request All Permissions
+  // Request all permissions
   elements.btnRequestAllPerms.addEventListener('click', async () => {
     await Permissions.request(
       ['clipboardRead', 'tabs'],
@@ -424,6 +429,7 @@ function setupEventListeners() {
     });
   });
 
+  // Native HTML5 <dialog> for Save Prompt
   elements.btnCloseSaveModal.addEventListener('click', closeSaveModal);
   elements.btnCancelSaveModal.addEventListener('click', closeSaveModal);
   elements.btnConfirmSavePrompt.addEventListener('click', confirmSavePrompt);
@@ -461,7 +467,7 @@ function setupEventListeners() {
 
     updateApiStatusUI();
     updateModelDropdown();
-    elements.settingsModal.classList.remove('active');
+    elements.settingsModal.close();
     showToast('Settings saved');
   });
 
@@ -512,8 +518,13 @@ function setupEventListeners() {
     }
   });
 
-  // Global Keyboard Shortcuts
+  // Global Keyboard Shortcuts (with IME-safe enter submit per modern-web-guidance)
   document.addEventListener('keydown', (e) => {
+    // IME composition check per ime-safe-enter-submit guide
+    if (e.isComposing || e.keyCode === 229) {
+      return;
+    }
+
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       const activePane = document.querySelector('.pane.active');
       if (activePane && activePane.id === 'tab-optimizer') {
@@ -528,12 +539,6 @@ function setupEventListeners() {
         e.preventDefault();
         elements.librarySearchInput.focus();
       }
-    }
-
-    if (e.key === 'Escape') {
-      closeSaveModal();
-      elements.settingsModal.classList.remove('active');
-      elements.runnerDrawer.style.display = 'none';
     }
   });
 }
@@ -647,8 +652,8 @@ function renderRunnerInputs() {
     const row = document.createElement('div');
     row.className = 'sandbox-row';
     row.innerHTML = `
-      <label class="sandbox-label">{{${v}}}</label>
-      <input type="text" class="input-flat sandbox-var-input" data-var="${v}" placeholder="Value for ${v}...">
+      <label class="sandbox-label" for="sandbox_var_${v}">{{${v}}}</label>
+      <input type="text" id="sandbox_var_${v}" class="input-flat sandbox-var-input" data-var="${v}" placeholder="Value for ${v}...">
     `;
     elements.runnerInputsGrid.appendChild(row);
   });
@@ -790,12 +795,11 @@ function openSaveModal(data) {
   elements.saveModalDescription.value = data.description || '';
   elements.saveModalCategory.value = data.category || 'custom';
   elements.saveModalTags.value = Array.isArray(data.tags) ? data.tags.join(', ') : '';
-  elements.savePromptModal.classList.add('active');
-  elements.saveModalPromptTitle.focus();
+  elements.savePromptModal.showModal();
 }
 
 function closeSaveModal() {
-  elements.savePromptModal.classList.remove('active');
+  elements.savePromptModal.close();
   editingPromptId = null;
 }
 
