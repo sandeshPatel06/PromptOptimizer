@@ -7,9 +7,9 @@ const extApi = typeof chrome !== 'undefined' ? chrome : (typeof browser !== 'und
 
 export const Permissions = {
   /**
-   * The host origin required for Google Gemini API
+   * The host origin required for Cloudflare Workers AI Gateway
    */
-  REQUIRED_ORIGINS: ['https://generativelanguage.googleapis.com/*'],
+  REQUIRED_ORIGINS: ['https://prompt-optimizer-api.patelbr5118s.workers.dev/*'],
 
   /**
    * Optional permissions that can be requested on-demand
@@ -38,14 +38,13 @@ export const Permissions = {
 
         const missing = [];
 
-        // Check Google API origin
-        const hasGeminiOrigin = this.REQUIRED_ORIGINS.every((orig) => {
-          // Wildcard origin matching
-          return Array.from(grantedOrigins).some((g) => g.includes('generativelanguage.googleapis.com') || g === '<all_urls>');
+        // Check Cloudflare AI Gateway origin
+        const hasGatewayOrigin = this.REQUIRED_ORIGINS.every((orig) => {
+          return Array.from(grantedOrigins).some((g) => g.includes('prompt-optimizer-api.patelbr5118s.workers.dev') || g === '<all_urls>');
         });
 
-        if (!hasGeminiOrigin) {
-          missing.push('Google Gemini API Network Access');
+        if (!hasGatewayOrigin) {
+          missing.push('Cloudflare AI Gateway Network Access');
         }
 
         // Check essential permissions
@@ -63,7 +62,7 @@ export const Permissions = {
           origins: Array.from(grantedOrigins),
           hasClipboardRead: grantedPerms.has('clipboardRead'),
           hasTabs: grantedPerms.has('tabs'),
-          hasGeminiOrigin,
+          hasGatewayOrigin,
           missing
         });
       });
@@ -101,9 +100,9 @@ export const Permissions = {
   },
 
   /**
-   * Requests Google Gemini API host permissions if not already granted
+   * Requests Cloudflare AI Gateway host permissions if not already granted
    */
-  async requestGeminiHost() {
+  async requestGatewayHost() {
     return this.request([], this.REQUIRED_ORIGINS);
   },
 

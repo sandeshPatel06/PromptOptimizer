@@ -8,13 +8,15 @@ import { STARTER_PROMPTS } from './prompts.js';
 const STORAGE_KEY = 'prompt_optimizer_state_v1';
 
 const DEFAULT_STATE = {
-  apiKey: '',
-  model: 'gemini-1.5-flash',
+  gatewayUrl: 'https://prompt-optimizer-api.patelbr5118s.workers.dev',
   systemInstructions: 'Prioritize clarity, specificity, and actionable output constraints. Avoid vague fluff, corporate buzzwords, and unnecessary preamble.',
-  hasCompletedOnboarding: false,
   activePreset: 'reasoning',
   savedPrompts: STARTER_PROMPTS,
-  history: []
+  history: [],
+  dailyUsage: {
+    date: new Date().toISOString().slice(0, 10),
+    count: 0
+  }
 };
 
 function getExtensionStorage() {
@@ -204,5 +206,27 @@ export const Storage = {
     } catch (err) {
       return { count: 0, error: err instanceof Error ? err.message : 'Invalid JSON file' };
     }
+  },
+
+  async recordUsage() {
+    const state = await this.getState();
+    const today = new Date().toISOString().slice(0, 10);
+    let usage = state.dailyUsage || { date: today, count: 0 };
+    if (usage.date !== today) {
+      usage = { date: today, count: 0 };
+    }
+    usage.count = (usage.count || 0) + 1;
+    await this.set({ dailyUsage: usage });
+    return usage.count;
+  },
+
+  async getDailyRemaining(limit = 100) {
+    const state = await this.getState();
+    const today = new Date().toISOString().slice(0, 10);
+    const usage = state.dailyUsage || { date: today, count: 0 };
+    if (usage.date !== today) {
+      return limit;
+    }
+    return Math.max(0, limit - (usage.count || 0));
   }
 };

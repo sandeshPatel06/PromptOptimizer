@@ -152,19 +152,61 @@ html, body {
   flex-shrink: 0;
 }
 
-.model-select-wrapper {
+.gateway-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   background: var(--bg-subtle);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xs);
-  padding: 2px 6px;
-  transition: border-color 0.12s;
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  transition: border-color 0.15s ease, background 0.15s ease;
+  user-select: none;
 }
 
-.model-select-wrapper:hover {
+.gateway-pill:hover {
   border-color: var(--border-medium);
+}
+
+.quota-count {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.stats-card {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+}
+
+.stat-label {
+  color: var(--text-muted);
+}
+
+.stat-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.stat-val.highlight-green {
+  color: var(--success);
+  font-weight: 500;
 }
 
 .status-indicator {
@@ -176,29 +218,16 @@ html, body {
   transition: background 0.2s, box-shadow 0.2s;
 }
 
+.status-indicator.online,
 .status-indicator.active {
   background: var(--success);
   box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
 }
 
+.status-indicator.offline,
 .status-indicator.missing {
   background: var(--danger);
   box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
-}
-
-.header-select {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  outline: none;
-  cursor: pointer;
-}
-
-.header-select option {
-  background: var(--bg-surface);
-  color: var(--text-primary);
 }
 
 .action-btn {

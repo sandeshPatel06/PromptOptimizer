@@ -1,30 +1,23 @@
 /**
- * PromptOptimizer - Main UI Controller
- * Built strictly according to Modern Web Guidance (native <dialog>, IME safety, container-aware).
- * With dynamic model discovery and auto-recovery from API version differences.
+ * PromptOptimizer - Main UI Controller (Production AI Gateway)
+ * Native <dialog>, IME safety, container-aware layout, and zero-login Cloudflare Workers AI integration.
  */
 
 import { Storage } from './lib/storage.js';
-import { GeminiApi } from './lib/gemini.js';
+import { OptimizerApi, DEFAULT_GATEWAY_URL } from './lib/api.js';
 import { Permissions } from './lib/permissions.js';
 import { OPTIMIZATION_PRESETS, detectVariables, fillVariables, countMetrics } from './lib/prompts.js';
 import { renderMarkdown } from './lib/markdown.js';
 
 const elements = {
-  headerModelSelect: document.getElementById('headerModelSelect'),
   statusDot: document.getElementById('statusDot'),
+  quotaBadgeText: document.getElementById('quotaBadgeText'),
+  gatewayPill: document.getElementById('gatewayPill'),
   btnPopOut: document.getElementById('btnPopOut'),
   btnHeaderSettings: document.getElementById('btnHeaderSettings'),
   
   navSegmentBtns: document.querySelectorAll('.nav-segment-btn'),
   panes: document.querySelectorAll('.pane'),
-  
-  permBanner: document.getElementById('permBanner'),
-  btnGrantBannerPerm: document.getElementById('btnGrantBannerPerm'),
-  
-  onboardingCard: document.getElementById('onboardingCard'),
-  onboardingKeyInput: document.getElementById('onboardingKeyInput'),
-  btnSaveOnboardingKey: document.getElementById('btnSaveOnboardingKey'),
   
   presetsContainer: document.getElementById('presetsContainer'),
   rawPromptInput: document.getElementById('rawPromptInput'),
@@ -67,13 +60,13 @@ const elements = {
   promptCardsList: document.getElementById('promptCardsList'),
   btnNewPromptModal: document.getElementById('btnNewPromptModal'),
   
-  // Native HTML5 <dialog> elements
+  // Settings Dialog
   settingsModal: document.getElementById('settingsModal'),
   btnCloseSettingsModal: document.getElementById('btnCloseSettingsModal'),
-  settingsApiKey: document.getElementById('settingsApiKey'),
-  btnTestKey: document.getElementById('btnTestKey'),
-  keyStatusAlert: document.getElementById('keyStatusAlert'),
-  modelRadioGroup: document.getElementById('modelRadioGroup'),
+  settingsGatewayUrl: document.getElementById('settingsGatewayUrl'),
+  btnTestGateway: document.getElementById('btnTestGateway'),
+  gatewayStatusAlert: document.getElementById('gatewayStatusAlert'),
+  settingsQuotaDaily: document.getElementById('settingsQuotaDaily'),
   permDiagList: document.getElementById('permDiagList'),
   btnRequestAllPerms: document.getElementById('btnRequestAllPerms'),
   settingsSystemInstructions: document.getElementById('settingsSystemInstructions'),
@@ -106,20 +99,20 @@ async function init() {
   appState = await Storage.getState();
   currentActivePresetId = appState.activePreset || 'reasoning';
 
-  renderPresets();
-  updateApiStatusUI();
-  updateModelDropdown();
-
-  elements.settingsApiKey.value = appState.apiKey || '';
-  elements.settingsSystemInstructions.value = appState.systemInstructions || '';
-  selectModelRadio(appState.model);
-
-  await checkPermissionsHealth();
-
-  // Dynamically discover supported models for this key
-  if (appState.apiKey) {
-    populateDynamicModels().catch(console.warn);
+  // Configure Gateway
+  const gateway = appState.gatewayUrl || DEFAULT_GATEWAY_URL;
+  OptimizerApi.setGatewayUrl(gateway);
+  if (elements.settingsGatewayUrl) {
+    elements.settingsGatewayUrl.value = gateway;
   }
+  if (elements.settingsSystemInstructions) {
+    elements.settingsSystemInstructions.value = appState.systemInstructions || '';
+  }
+
+  renderPresets();
+  await updateQuotaDisplay();
+  await checkGatewayStatus();
+  await checkPermissionsHealth();
 
   if (appState.pendingPrompt) {
     elements.rawPromptInput.value = appState.pendingPrompt;
@@ -132,45 +125,48 @@ async function init() {
 }
 
 /**
- * Dynamically queries Google ModelService to list models actually available on this key
+ * Checks AI Gateway status and sets topbar indicator
  */
-async function populateDynamicModels() {
-  if (!appState.apiKey) return;
-  const models = await GeminiApi.getAvailableModels(appState.apiKey);
-  if (!models || models.length === 0) return;
-
-  // Filter models relevant to text generation
-  const genModels = models.filter((m) => m.includes('gemini') || m.includes('flash') || m.includes('pro'));
-  if (genModels.length === 0) return;
-
-  elements.headerModelSelect.innerHTML = '';
-  genModels.forEach((m) => {
-    const opt = document.createElement('option');
-    opt.value = m;
-    const label = m.replace(/^gemini-/, '').replace(/-/g, ' ');
-    opt.textContent = label;
-    elements.headerModelSelect.appendChild(opt);
-  });
-
-  // Verify active model exists in supported list
-  if (!genModels.includes(appState.model)) {
-    const resolved = await GeminiApi.resolveWorkingModel(appState.apiKey, appState.model);
-    appState.model = resolved;
-    await Storage.set({ model: resolved });
+async function checkGatewayStatus() {
+  try {
+    const health = await OptimizerApi.checkHealth();
+    if (health.status === 'online') {
+      if (elements.statusDot) {
+        elements.statusDot.className = 'status-indicator online';
+      }
+      if (elements.gatewayPill) {
+        elements.gatewayPill.title = `AI Gateway: Online (${health.model || 'Llama 3.1 8B'})`;
+      }
+    } else {
+      if (elements.statusDot) {
+        elements.statusDot.className = 'status-indicator offline';
+      }
+      if (elements.gatewayPill) {
+        elements.gatewayPill.title = 'AI Gateway: Offline';
+      }
+    }
+  } catch {
+    if (elements.statusDot) {
+      elements.statusDot.className = 'status-indicator offline';
+    }
   }
+}
 
-  elements.headerModelSelect.value = appState.model;
+/**
+ * Displays live quota remaining to the user
+ */
+async function updateQuotaDisplay() {
+  const remaining = await Storage.getDailyRemaining(100);
+  if (elements.quotaBadgeText) {
+    elements.quotaBadgeText.textContent = `${remaining}/100 Free`;
+  }
+  if (elements.settingsQuotaDaily) {
+    elements.settingsQuotaDaily.textContent = `${remaining} / 100 requests remaining`;
+  }
 }
 
 async function checkPermissionsHealth() {
   const permStatus = await Permissions.checkAll();
-
-  if (permStatus.isExtension && !permStatus.hasGeminiOrigin) {
-    elements.permBanner.style.display = 'flex';
-  } else {
-    elements.permBanner.style.display = 'none';
-  }
-
   renderPermissionDiagnostics(permStatus);
 }
 
@@ -180,10 +176,10 @@ function renderPermissionDiagnostics(status) {
 
   const list = [
     {
-      name: 'Google Gemini API Access',
-      granted: status.hasGeminiOrigin,
+      name: 'Cloudflare AI Gateway Access',
+      granted: status.hasGatewayOrigin,
       onRequest: async () => {
-        const ok = await Permissions.requestGeminiHost();
+        const ok = await Permissions.requestGatewayHost();
         if (ok) {
           showToast('Access granted');
           await checkPermissionsHealth();
@@ -249,41 +245,7 @@ function renderPresets() {
   });
 }
 
-function updateApiStatusUI() {
-  const hasKey = Boolean(appState.apiKey && appState.apiKey.trim() !== '');
-  if (hasKey) {
-    elements.statusDot.className = 'status-indicator active';
-    elements.statusDot.title = 'Gemini Connected';
-    elements.onboardingCard.style.display = 'none';
-  } else {
-    elements.statusDot.className = 'status-indicator missing';
-    elements.statusDot.title = 'API Key Required';
-    elements.onboardingCard.style.display = 'flex';
-  }
-}
-
-function updateModelDropdown() {
-  const model = appState.model || 'gemini-1.5-flash';
-  elements.headerModelSelect.value = model;
-}
-
-function selectModelRadio(modelId) {
-  const radios = elements.modelRadioGroup.querySelectorAll('input[type="radio"]');
-  radios.forEach((r) => {
-    r.checked = r.value === modelId;
-  });
-}
-
 function setupEventListeners() {
-  // Topbar model selector
-  elements.headerModelSelect.addEventListener('change', async (e) => {
-    const selected = e.target.value;
-    appState.model = selected;
-    await Storage.set({ model: selected });
-    selectModelRadio(selected);
-    showToast(`Model: ${selected}`);
-  });
-
   // Top navigation switcher
   elements.navSegmentBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -314,11 +276,11 @@ function setupEventListeners() {
     }
   });
 
-  // Native HTML5 <dialog> for Settings (per modern-web-guidance dialog)
+  // Native HTML5 <dialog> for Settings
   elements.btnHeaderSettings.addEventListener('click', async () => {
-    elements.settingsApiKey.value = appState.apiKey || '';
+    elements.settingsGatewayUrl.value = appState.gatewayUrl || DEFAULT_GATEWAY_URL;
     elements.settingsSystemInstructions.value = appState.systemInstructions || '';
-    selectModelRadio(appState.model);
+    await updateQuotaDisplay();
     await checkPermissionsHealth();
     elements.settingsModal.showModal();
   });
@@ -327,59 +289,32 @@ function setupEventListeners() {
     elements.settingsModal.close();
   });
 
-  // Grant banner permission
-  elements.btnGrantBannerPerm.addEventListener('click', async () => {
-    const granted = await Permissions.requestGeminiHost();
-    if (granted) {
-      elements.permBanner.style.display = 'none';
-      showToast('Network access granted');
-      await checkPermissionsHealth();
+  elements.settingsModal.addEventListener('click', (e) => {
+    if (e.target === elements.settingsModal) {
+      elements.settingsModal.close();
     }
   });
 
-  // Request all permissions
-  elements.btnRequestAllPerms.addEventListener('click', async () => {
-    await Permissions.request(
-      ['clipboardRead', 'tabs'],
-      ['https://generativelanguage.googleapis.com/*']
-    );
-    await checkPermissionsHealth();
-    showToast('Permissions refreshed');
+  // IME-Safe Input Character Counter
+  elements.rawPromptInput.addEventListener('input', (e) => {
+    if (e.isComposing) return;
+    updateCharCounter();
   });
 
-  // Save onboarding key
-  elements.btnSaveOnboardingKey.addEventListener('click', async () => {
-    const key = elements.onboardingKeyInput.value.trim();
-    if (!key) {
-      showToast('Enter a Gemini API key');
-      return;
-    }
+  elements.rawPromptInput.addEventListener('compositionend', () => {
+    updateCharCounter();
+  });
 
-    elements.btnSaveOnboardingKey.disabled = true;
-    elements.btnSaveOnboardingKey.textContent = '...';
-
-    await Permissions.requestGeminiHost();
-
-    const validation = await GeminiApi.validateApiKey(key);
-    elements.btnSaveOnboardingKey.disabled = false;
-    elements.btnSaveOnboardingKey.textContent = 'Save';
-
-    if (validation.valid) {
-      appState.apiKey = key;
-      appState.hasCompletedOnboarding = true;
-      await Storage.set({ apiKey: key, hasCompletedOnboarding: true });
-      elements.settingsApiKey.value = key;
-      updateApiStatusUI();
-      await populateDynamicModels();
-      showToast('Gemini connected');
-    } else {
-      alert(`Invalid key: ${validation.error}`);
+  // Keyboard shortcut: Cmd/Ctrl + Enter to refine
+  elements.rawPromptInput.addEventListener('keydown', (e) => {
+    if (e.isComposing || e.keyCode === 229) return;
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      executeOptimization();
     }
   });
 
-  // Editor Actions
-  elements.rawPromptInput.addEventListener('input', updateCharCounter);
-
+  // Paste Action with Permission Handling
   elements.btnPastePrompt.addEventListener('click', async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -414,7 +349,7 @@ function setupEventListeners() {
     elements.rawPromptInput.focus();
   });
 
-  // Optimize
+  // Optimize Prompt
   elements.btnOptimize.addEventListener('click', executeOptimization);
 
   // View Mode Toggles (Result)
@@ -492,43 +427,37 @@ function setupEventListeners() {
   elements.btnCancelSaveModal.addEventListener('click', closeSaveModal);
   elements.btnConfirmSavePrompt.addEventListener('click', confirmSavePrompt);
 
-  // Settings Actions
-  elements.btnTestKey.addEventListener('click', async () => {
-    const key = elements.settingsApiKey.value.trim();
-    if (!key) {
-      showKeyStatus('Enter an API key to test.', 'danger');
-      return;
-    }
-    showKeyStatus('Verifying...', 'muted');
-    const result = await GeminiApi.validateApiKey(key);
-    if (result.valid) {
-      showKeyStatus('✓ Key is valid', 'success');
-      await populateDynamicModels();
-    } else {
-      showKeyStatus(`✗ ${result.error}`, 'danger');
-    }
-  });
+  // Settings: Ping AI Gateway
+  if (elements.btnTestGateway) {
+    elements.btnTestGateway.addEventListener('click', async () => {
+      const url = elements.settingsGatewayUrl.value.trim() || DEFAULT_GATEWAY_URL;
+      OptimizerApi.setGatewayUrl(url);
+      showGatewayStatus('Testing gateway...', 'muted');
+      const health = await OptimizerApi.checkHealth();
+      if (health.status === 'online') {
+        showGatewayStatus(`✓ Online: ${health.service || 'AI Gateway'} (${health.model || 'Llama 3.1 8B'})`, 'success');
+        await checkGatewayStatus();
+      } else {
+        showGatewayStatus('✗ Gateway unreachable. Check URL or network.', 'danger');
+      }
+    });
+  }
 
+  // Settings: Save Changes
   elements.btnSaveAllSettings.addEventListener('click', async () => {
-    const key = elements.settingsApiKey.value.trim();
+    const gateway = elements.settingsGatewayUrl.value.trim() || DEFAULT_GATEWAY_URL;
     const instructions = elements.settingsSystemInstructions.value.trim();
-    const selectedModel = elements.modelRadioGroup.querySelector('input[type="radio"]:checked')?.value || 'gemini-1.5-flash';
 
-    appState.apiKey = key;
+    appState.gatewayUrl = gateway;
     appState.systemInstructions = instructions;
-    appState.model = selectedModel;
+    OptimizerApi.setGatewayUrl(gateway);
 
     await Storage.set({
-      apiKey: key,
-      systemInstructions: instructions,
-      model: selectedModel
+      gatewayUrl: gateway,
+      systemInstructions: instructions
     });
 
-    updateApiStatusUI();
-    updateModelDropdown();
-    if (key) {
-      await populateDynamicModels();
-    }
+    await checkGatewayStatus();
     elements.settingsModal.close();
     showToast('Settings saved');
   });
@@ -549,7 +478,7 @@ function setupEventListeners() {
     elements.importFileInput.click();
   });
 
-  elements.importFileInput.addEventListener('change', async (e) => {
+  elements.importFileInput.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -572,64 +501,50 @@ function setupEventListeners() {
 
   elements.btnResetAllData.addEventListener('click', async () => {
     if (confirm('Reset prompts and storage to factory defaults?')) {
-      localStorage.clear();
-      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        await chrome.storage.local.clear();
-      }
-      location.reload();
+      await Storage.clearAll();
+      appState = await Storage.getState();
+      renderPresets();
+      renderLibrary();
+      await updateQuotaDisplay();
+      elements.settingsModal.close();
+      showToast('Reset completed');
     }
   });
 
-  // Global Keyboard Shortcuts (with IME-safe enter submit per modern-web-guidance)
-  document.addEventListener('keydown', (e) => {
-    if (e.isComposing || e.keyCode === 229) {
-      return;
-    }
-
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      const activePane = document.querySelector('.pane.active');
-      if (activePane && activePane.id === 'tab-optimizer') {
-        e.preventDefault();
-        executeOptimization();
-      }
-    }
-
-    if (e.key === '/' && document.activeElement !== elements.rawPromptInput && document.activeElement !== elements.librarySearchInput) {
-      const activePane = document.querySelector('.pane.active');
-      if (activePane && activePane.id === 'tab-library') {
-        e.preventDefault();
-        elements.librarySearchInput.focus();
-      }
+  elements.btnRequestAllPerms.addEventListener('click', async () => {
+    const granted = await Permissions.requestGatewayHost();
+    if (granted) {
+      showToast('All permissions granted');
+      await checkPermissionsHealth();
     }
   });
 }
 
 function updateCharCounter() {
-  const metrics = countMetrics(elements.rawPromptInput.value);
-  elements.inputCharCounter.textContent = `${metrics.words} words • ${metrics.chars} chars`;
+  const text = elements.rawPromptInput.value;
+  const metrics = countMetrics(text);
+  elements.inputCharCounter.textContent = `${metrics.chars} chars • ~${metrics.tokens} tokens`;
+}
+
+function showGatewayStatus(text, variant) {
+  if (!elements.gatewayStatusAlert) return;
+  elements.gatewayStatusAlert.style.display = 'block';
+  elements.gatewayStatusAlert.textContent = text;
+  elements.gatewayStatusAlert.className = `form-hint ${variant}`;
 }
 
 async function executeOptimization() {
   const rawPrompt = elements.rawPromptInput.value.trim();
   if (!rawPrompt) {
-    showToast('Enter a prompt first');
     elements.rawPromptInput.focus();
     return;
   }
 
-  if (!appState.apiKey) {
-    elements.btnHeaderSettings.click();
-    showToast('Gemini API key required');
+  // Check remaining quota locally before request
+  const remaining = await Storage.getDailyRemaining(100);
+  if (remaining <= 0) {
+    showToast('Daily quota of 100 requests reached. Resets in 24 hours.');
     return;
-  }
-
-  const permStatus = await Permissions.checkAll();
-  if (permStatus.isExtension && !permStatus.hasGeminiOrigin) {
-    const granted = await Permissions.requestGeminiHost();
-    if (!granted) {
-      alert('Network permission required to contact Google Gemini API.');
-      return;
-    }
   }
 
   elements.btnOptimize.disabled = true;
@@ -639,9 +554,7 @@ async function executeOptimization() {
   const activePreset = OPTIMIZATION_PRESETS.find((p) => p.id === currentActivePresetId);
 
   try {
-    const result = await GeminiApi.optimizePrompt({
-      apiKey: appState.apiKey,
-      model: appState.model,
+    const result = await OptimizerApi.optimizePrompt({
       rawPrompt,
       presetInstruction: activePreset?.instruction || '',
       customInstructions: appState.systemInstructions || ''
@@ -649,12 +562,9 @@ async function executeOptimization() {
 
     currentOptimizationResult = result;
 
-    // If auto-resolved to a different working model (e.g. gemini-2.0-flash or gemini-1.5-flash-latest)
-    if (result.usedModel && result.usedModel !== appState.model) {
-      appState.model = result.usedModel;
-      await Storage.set({ model: result.usedModel });
-      updateModelDropdown();
-    }
+    // Record usage and update quota counter
+    await Storage.recordUsage();
+    await updateQuotaDisplay();
 
     elements.resultCard.style.display = 'flex';
     if (elements.resultPreview) {
@@ -693,7 +603,7 @@ async function executeOptimization() {
       optimizedPrompt: result.optimizedPrompt,
       rationale: result.rationale,
       preset: currentActivePresetId,
-      model: appState.model,
+      model: result.usedModel || 'Llama 3.1 8B',
       variables: result.detectedVariables
     });
 
@@ -702,7 +612,12 @@ async function executeOptimization() {
 
     elements.resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch (err) {
-    alert(`Optimization error: ${err instanceof Error ? err.message : String(err)}`);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('Rate limit') || msg.includes('429')) {
+      showToast('Burst limit reached. Please wait 15 seconds.');
+    } else {
+      showToast(`Error: ${msg}`);
+    }
   } finally {
     elements.btnOptimize.disabled = false;
     elements.optimizeBtnSpinner.style.display = 'none';
@@ -770,10 +685,6 @@ function renderRunnerInputs() {
 
 async function executePromptTest() {
   if (!currentOptimizationResult) return;
-  if (!appState.apiKey) {
-    showToast('Gemini API key required');
-    return;
-  }
 
   const inputs = elements.runnerInputsGrid.querySelectorAll('.sandbox-var-input');
   const values = {};
@@ -790,17 +701,15 @@ async function executePromptTest() {
     elements.runnerOutputWrapper.style.display = 'block';
   }
   if (elements.runnerOutputPreview) {
-    elements.runnerOutputPreview.innerHTML = '<span style="color: var(--text-muted);">Executing with Gemini...</span>';
+    elements.runnerOutputPreview.innerHTML = '<span style="color: var(--text-muted);">Executing with Cloudflare AI...</span>';
   }
   if (elements.runnerOutputRaw) {
-    elements.runnerOutputRaw.textContent = 'Executing with Gemini...';
+    elements.runnerOutputRaw.textContent = 'Executing with Cloudflare AI...';
   }
   setSandboxViewMode('preview');
 
   try {
-    const output = await GeminiApi.testPrompt({
-      apiKey: appState.apiKey,
-      model: appState.model,
+    const output = await OptimizerApi.testPrompt({
       promptText: filledPrompt
     });
     if (elements.runnerOutputPreview) {
@@ -835,46 +744,44 @@ function renderLibrary() {
       return false;
     }
     if (query) {
-      const matchTitle = p.title.toLowerCase().includes(query);
+      const matchTitle = (p.title || '').toLowerCase().includes(query);
       const matchDesc = (p.description || '').toLowerCase().includes(query);
       const matchTags = (p.tags || []).some((t) => t.toLowerCase().includes(query));
-      const matchContent = (p.optimizedPrompt || '').toLowerCase().includes(query);
-      return matchTitle || matchDesc || matchTags || matchContent;
+      return matchTitle || matchDesc || matchTags;
     }
     return true;
   });
 
   if (filtered.length === 0) {
     elements.promptCardsList.innerHTML = `
-      <div class="empty-view">
-        <p>No saved prompts found.</p>
+      <div style="padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 11.5px;">
+        No prompts found matching your search.
       </div>
     `;
     return;
   }
 
   filtered.forEach((prompt) => {
-    const item = document.createElement('article');
-    item.className = 'prompt-item';
+    const item = document.createElement('div');
+    item.className = 'library-item';
+    item.dataset.id = prompt.id;
 
     const tagsHtml = (prompt.tags || [])
-      .map((t) => `<span class="tag-unit">#${t}</span>`)
+      .map((t) => `<span class="library-tag">${t}</span>`)
       .join('');
 
     item.innerHTML = `
-      <div class="prompt-item-head">
-        <span class="prompt-item-title">${escapeHtml(prompt.title)}</span>
-        <button class="btn-text btn-fav" title="Star" data-id="${prompt.id}">
-          ${prompt.isFavorite ? '★' : '☆'}
-        </button>
-      </div>
-      ${prompt.description ? `<p class="prompt-item-desc">${escapeHtml(prompt.description)}</p>` : ''}
-      <div class="prompt-item-foot">
-        <div class="meta-tags">
-          <span class="tag-cat">${prompt.category}</span>
-          ${tagsHtml}
+      <div class="library-item-head">
+        <div class="library-item-title-row">
+          <button class="btn-fav ${prompt.isFavorite ? 'active' : ''}" title="Star prompt" aria-label="Star prompt">★</button>
+          <span class="library-item-title">${escapeHtml(prompt.title)}</span>
         </div>
-        <div class="item-actions">
+        <span class="library-category-badge">${prompt.category || 'custom'}</span>
+      </div>
+      <p class="library-item-desc">${escapeHtml(prompt.description || prompt.optimizedPrompt.slice(0, 90) + '...')}</p>
+      <div class="library-item-foot">
+        <div class="library-tags-list">${tagsHtml}</div>
+        <div class="library-actions">
           <button class="tool-btn btn-item-copy">Copy</button>
           <button class="tool-btn btn-item-use">Use</button>
           <button class="btn-text btn-item-del" style="color: var(--text-muted);">&times;</button>
@@ -920,38 +827,45 @@ function openSaveModal(data) {
   editingPromptId = data.id || null;
   elements.saveModalTitle.textContent = editingPromptId ? 'Edit Prompt' : 'Save Prompt';
   elements.saveModalPromptTitle.value = data.title || '';
-  elements.saveModalDescription.value = data.description || '';
   elements.saveModalCategory.value = data.category || 'custom';
   elements.saveModalTags.value = Array.isArray(data.tags) ? data.tags.join(', ') : '';
+  elements.saveModalDescription.value = data.description || '';
   elements.savePromptModal.showModal();
 }
 
 function closeSaveModal() {
   elements.savePromptModal.close();
-  editingPromptId = null;
 }
 
 async function confirmSavePrompt() {
   const title = elements.saveModalPromptTitle.value.trim();
   if (!title) {
-    alert('Please enter a title.');
     elements.saveModalPromptTitle.focus();
     return;
   }
 
   const category = elements.saveModalCategory.value;
-  const description = elements.saveModalDescription.value.trim();
   const tags = elements.saveModalTags.value
     .split(',')
-    .map((t) => t.trim().toLowerCase())
+    .map((t) => t.trim())
     .filter(Boolean);
+  const description = elements.saveModalDescription.value.trim();
 
-  const rawPrompt = elements.rawPromptInput.value;
-  const optimizedPrompt = currentOptimizationResult ? currentOptimizationResult.optimizedPrompt : rawPrompt;
-  const variables = detectVariables(optimizedPrompt);
+  let optimizedPrompt = '';
+  let rawPrompt = '';
+  let variables = [];
+
+  if (currentOptimizationResult) {
+    optimizedPrompt = currentOptimizationResult.optimizedPrompt;
+    rawPrompt = elements.rawPromptInput.value;
+    variables = currentOptimizationResult.detectedVariables;
+  } else {
+    rawPrompt = elements.rawPromptInput.value;
+    optimizedPrompt = rawPrompt;
+  }
 
   const promptObj = {
-    id: editingPromptId || 'user_' + Math.random().toString(36).substring(2, 9),
+    id: editingPromptId || 'prompt_' + Date.now().toString(36),
     title,
     description,
     category,
@@ -976,19 +890,15 @@ function showToast(msg) {
   elements.toastMessage.classList.add('show');
   setTimeout(() => {
     elements.toastMessage.classList.remove('show');
-  }, 1800);
-}
-
-function showKeyStatus(msg, type) {
-  elements.keyStatusAlert.style.display = 'block';
-  elements.keyStatusAlert.textContent = msg;
-  elements.keyStatusAlert.style.color = type === 'success' ? 'var(--success)' : (type === 'danger' ? 'var(--danger)' : 'var(--text-muted)');
+  }, 2000);
 }
 
 function deriveTitleFromPrompt(text) {
-  if (!text) return 'Custom Prompt';
-  const firstLine = text.trim().split('\n')[0].replace(/^[#*\s-]+/, '').trim();
-  return firstLine.slice(0, 32) || 'Custom Prompt';
+  const firstLine = text.trim().split('\n')[0].replace(/^#+\s*/, '').trim();
+  if (firstLine.length > 36) {
+    return firstLine.slice(0, 36) + '...';
+  }
+  return firstLine || 'Engineered Prompt';
 }
 
 function escapeHtml(str) {

@@ -15,7 +15,7 @@
     "tabs"
   ],
   "host_permissions": [
-    "https://generativelanguage.googleapis.com/*"
+    "https://prompt-optimizer-api.patelbr5118s.workers.dev/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;"

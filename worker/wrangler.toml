@@ -1,0 +1,7 @@
+name = "prompt-optimizer-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+account_id = "c04e720708dcb939e074ad0b1e594bf8"
+
+[ai]
+binding = "AI"

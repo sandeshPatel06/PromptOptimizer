@@ -24,16 +24,10 @@
       </div>
 
       <div class="topbar-right">
-        <!-- Model Selector Dropdown -->
-        <div class="model-select-wrapper" title="Select Gemini model">
-          <span class="status-indicator" id="statusDot"></span>
-          <label for="headerModelSelect" class="visually-hidden">Active Gemini Model</label>
-          <select id="headerModelSelect" class="header-select">
-            <option value="gemini-1.5-flash">1.5 Flash</option>
-            <option value="gemini-2.5-flash">2.5 Flash</option>
-            <option value="gemini-2.0-flash">2.0 Flash</option>
-            <option value="gemini-1.5-pro">1.5 Pro</option>
-          </select>
+        <!-- Live AI Gateway & Quota Status Pill -->
+        <div class="gateway-pill" id="gatewayPill" title="Cloudflare Workers AI Gateway">
+          <span class="status-indicator online" id="statusDot"></span>
+          <span class="quota-count" id="quotaBadgeText">100/100 Free</span>
         </div>
 
         <button class="action-btn" id="btnPopOut" title="Open in new tab" aria-label="Open in new tab">
@@ -55,25 +49,6 @@
       <button class="nav-segment-btn active" data-tab="tab-optimizer" role="tab" aria-selected="true">Refine</button>
       <button class="nav-segment-btn" data-tab="tab-library" role="tab" aria-selected="false">Library</button>
     </nav>
-
-    <!-- Permission Request Banner -->
-    <div class="alert-bar" id="permBanner" style="display: none;">
-      <span>Grant network access to Google Gemini</span>
-      <button class="btn-xs" id="btnGrantBannerPerm">Allow</button>
-    </div>
-
-    <!-- First-Time Inline API Key Setup Banner -->
-    <div class="setup-bar" id="onboardingCard" style="display: none;">
-      <div class="setup-header">
-        <span>Enter Google Gemini API Key</span>
-        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" class="link-hint">Get key &rarr;</a>
-      </div>
-      <div class="setup-row">
-        <label for="onboardingKeyInput" class="visually-hidden">Gemini API Key</label>
-        <input type="password" id="onboardingKeyInput" class="input-flat" placeholder="AIzaSy..." autocomplete="off">
-        <button class="btn-solid" id="btnSaveOnboardingKey">Save</button>
-      </div>
-    </div>
 
     <!-- TAB 1: OPTIMIZER (REFINE) -->
     <main class="pane active" id="tab-optimizer" role="tabpanel">
@@ -211,41 +186,36 @@
         </div>
 
         <div class="dialog-body">
-          <!-- API Key Section -->
+          <!-- AI Gateway Endpoint Configuration -->
           <div class="form-group">
-            <label class="form-label" for="settingsApiKey">Google Gemini API Key</label>
+            <label class="form-label" for="settingsGatewayUrl">Cloudflare AI Gateway</label>
             <div class="input-action-row">
-              <input type="password" id="settingsApiKey" class="input-flat" placeholder="AIzaSy...">
-              <button class="btn-flat" id="btnTestKey">Check</button>
+              <input type="url" id="settingsGatewayUrl" class="input-flat" placeholder="https://prompt-optimizer-api.patelbr5118s.workers.dev">
+              <button class="btn-flat" id="btnTestGateway">Ping</button>
             </div>
-            <div id="keyStatusAlert" class="form-hint" style="display: none;"></div>
+            <div id="gatewayStatusAlert" class="form-hint" style="display: none;"></div>
           </div>
 
-          <!-- Model Choice -->
+          <!-- Enterprise Rate & Quota Diagnostics -->
           <div class="form-group">
-            <span class="form-label">Model</span>
-            <div class="options-stack" id="modelRadioGroup">
-              <label class="option-row">
-                <input type="radio" name="modelOption" value="gemini-1.5-flash" checked>
-                <div>
-                  <div class="option-name">Gemini 1.5 Flash <span class="tag-rec">Default</span></div>
-                  <div class="option-desc">Fast, cost-efficient, 1M token context.</div>
-                </div>
-              </label>
-              <label class="option-row">
-                <input type="radio" name="modelOption" value="gemini-2.5-flash">
-                <div>
-                  <div class="option-name">Gemini 2.5 Flash</div>
-                  <div class="option-desc">Higher reasoning fidelity with low latency.</div>
-                </div>
-              </label>
-              <label class="option-row">
-                <input type="radio" name="modelOption" value="gemini-1.5-pro">
-                <div>
-                  <div class="option-name">Gemini 1.5 Pro</div>
-                  <div class="option-desc">Heavyweight analytical reasoning.</div>
-                </div>
-              </label>
+            <span class="form-label">Quota & Rate Limits</span>
+            <div class="stats-card">
+              <div class="stat-row">
+                <span class="stat-label">Model Engine</span>
+                <span class="stat-val">Meta Llama 3.1 8B FP8</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Daily Free Balance</span>
+                <span class="stat-val highlight-green" id="settingsQuotaDaily">100 / 100 requests remaining</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Burst Protection</span>
+                <span class="stat-val">Max 15 req/min (Anti-DoS)</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Authentication</span>
+                <span class="stat-val highlight-green">Zero-Config (Instant)</span>
+              </div>
             </div>
           </div>
 
